@@ -1,6 +1,6 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
-**Initial status:** Specifications only. No source implementation or live integrations are claimed to exist. Codex updates this document after each phase with actual files, commands and observed evidence.
+**Current status:** Phases 0–2 are verified on one Apple Silicon Mac. This tracker records the commands, results, and gates for each phase.
 
 ## Workflow rules
 
@@ -12,32 +12,32 @@
 
 ## Phase checklist
 
-### Phase 0 — Foundation / contracts / doctor — NOT_STARTED
-- [ ] Repo scaffold, source control ignore patterns, lockfiles, typed models and schemas.
-- [ ] Python, Node and Pi compatibility probe with harmless read-only diagnostics.
-- [ ] Local SQLite adapter, local file checkpoint store, structured redacted logs.
-- [ ] `liferaft doctor` CLI and OS-aware setup docs.
-- [ ] Tests for schema validation, auth/redaction and offline mode.
-- [ ] Record actual OS, Python, architecture, dependency constraints (no secrets).
+### Phase 0 — Foundation / contracts / doctor — DONE
+- [x] Repo scaffold, source control ignore patterns, lockfiles, typed models and schemas.
+- [x] Python, Node and Pi compatibility probe with harmless read-only diagnostics.
+- [x] Local SQLite adapter, local file checkpoint store, structured redacted logs.
+- [x] `liferaft doctor` CLI and OS-aware setup docs.
+- [x] Tests for schema validation, auth/redaction and offline mode.
+- [x] Record actual OS, Python, architecture, dependency constraints (no secrets).
 - **Gate:** local backend tests pass, secrets never printed, no remote connectivity required.
 
-### Phase 1 — Genuine PyTorch job + checkpoint/resume — NOT_STARTED
-- [ ] Seeded 32-feature regression MLP, real optimizer and loss logging.
-- [ ] Model+optimizer+RNG+dataset cursor checkpoint schema and atomic writes.
-- [ ] SHA-256, immutable filenames, compatibility and tampering checks.
-- [ ] Resume K→K+1 and baseline-comparison tests.
+### Phase 1 — Genuine PyTorch job + checkpoint/resume — DONE
+- [x] Seeded 32-feature regression MLP, real optimizer and loss logging.
+- [x] Model+optimizer+RNG+dataset cursor checkpoint schema and atomic writes.
+- [x] SHA-256, immutable filenames, compatibility and tampering checks.
+- [x] Resume K→K+1 and baseline-comparison tests.
 - **Gate:** 200-step baseline and interrupted/restarted run pass actual numeric checks.
 
-### Phase 2 — Local failover engine and ownership — NOT_STARTED
-- [ ] Heartbeats, lease TTL, fencing epoch, durable event log.
-- [ ] Primary and standby CLI processes, local checkpoint transfer and monitored handoff.
-- [ ] Graceful risk preemption and worker-process crash tests.
-- [ ] No-valid-checkpoint, race, stale-primary and idempotence tests.
+### Phase 2 — Local failover engine and ownership — DONE
+- [x] Heartbeats, lease TTL, fencing epoch, durable event log.
+- [x] Primary and standby CLI processes, local checkpoint transfer and monitored handoff.
+- [x] Graceful risk preemption and worker-process crash tests.
+- [x] No-valid-checkpoint, race, stale-primary and idempotence tests.
 - **Gate:** real second process finishes training and old primary cannot commit.
 
 ### Phase 3 — Cloud coordination for campus-isolated devices — NOT_STARTED
-- [ ] Hosted Supabase Postgres/Storage/Edge Functions created using verified docs.
-- [ ] Auth roles, RLS, private bucket, signed URLs, immutable object paths.
+- [ ] Hosted HTTPS coordinator and MongoDB Atlas set up using verified docs.
+- [ ] Scoped device roles, private Atlas checkpoint storage, immutable artifacts, authenticated transfer.
 - [ ] Atomic lease claim/yield/reject stale epoch and cloud health checks.
 - [ ] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
 - [ ] Deny anonymous/untrusted reads and fake device writes.
@@ -111,7 +111,7 @@
 | Confirm 64GB microSD and card reader are still available | Pi OS boot | `TEAM_SETUP_GUIDE.md` §7 | NOT_CHECKED |
 | Identify exact fan model and ESP32 USB connector | electrical safety | `HARDWARE_SAFETY_AND_WIRING.md` §B | NOT_CHECKED |
 | Check DS18B20 sensor type and presence of 4.7kΩ resistor | avoid wrong wiring | `HARDWARE_SAFETY_AND_WIRING.md` §B/C | NOT_CHECKED |
-| Team Supabase project account (when Phase 3 needs it) | hosted coordination/storage | `TEAM_SETUP_GUIDE.md` §4 | NOT_CHECKED |
+| Team MongoDB Atlas project account (Phase 3) | hosted coordination and checkpoint storage | Atlas setup guide pending Phase 3 | NOT_CHECKED |
 | NVIDIA Build account/key (when Phase 7 needs it) | live tool-using agent | `TEAM_SETUP_GUIDE.md` §5 | NOT_CHECKED |
 | Photon project/channel and consenting operator (Phase 8) | real messaging | `TEAM_SETUP_GUIDE.md` §6 | NOT_CHECKED |
 | Compatible ESP32 USB data cable | flash/read serial | `TEAM_SETUP_GUIDE.md` §8 | NOT_CHECKED |
@@ -149,3 +149,43 @@
 - [x] `web/demo/index.html` simulated cockpit (SIMULATED badge; no live data claimed)
 - [ ] Port cockpit to Next.js `web/` and bind to real events
 - [ ] Add `prev_hash` chain + Verify button, Lifeboat Score from real telemetry
+
+### 2026-11-07 — Phase 0 — DONE
+
+- Added a Python CLI, locked foundation dependencies, npm lockfile, Pydantic and TypeScript contracts with a JSON Schema snapshot, redacted logging, SQLite event journal, immutable local artifact storage, and local setup instructions.
+- `python3 -m unittest discover -s tests -p test_foundation.py -v` passed 6 tests. Offline SQLite and filesystem, replay/time rejection, operator token boundary, tamper detection, schema sync and redaction passed.
+- `npm ci --offline --ignore-scripts --cache .liferaft/npm` and `./node_modules/.bin/tsc --strict --noEmit web/src/lib/contracts.ts` passed using the cached official TypeScript package.
+- `python3 -m liferaft doctor --network --json --redact` exited 0 for local use on macOS ARM64 (Darwin 27.0.0, Python 3.13.5, SQLite 3.49.1, Node 22.16.0, npm 10.9.2). Both public HTTPS probes returned unreachable in the execution shell. PyTorch was absent and no Pi/serial board was detected. Provider probes and physical hardware remain unverified.
+- Architecture decision. SQLite commits each event and its SHA-256 predecessor in one transaction. Local checkpoint publishing uses a no-overwrite filesystem link from a flushed staging file. Both are offline and open no listening ports. Phase 3 will put lease authority and private checkpoint storage behind an outbound HTTPS API.
+- No hardware action required for this phase. Next is Phase 1. Its numeric gate requires a real CPU PyTorch installation.
+
+### 2026-11-07 — Phase 1 — BLOCKED_EXTERNAL
+
+- Added `liferaft/workload.py`, `liferaft/checkpoint.py`, `liferaft/training_cli.py`, `tests/test_training.py` and the README training flow. The workload is a one-thread CPU MLP with AdamW and deterministic synthetic regression data. A checkpoint contains weights, optimizer buffers, step, dataset seed and cursor, loss history, and Python, NumPy and Torch RNG states.
+- Compatibility choices. Integer source data is fingerprinted in a fixed byte order. Model/config identity and checkpoint ownership metadata are checked. SHA-256 and size are checked before CPU-only, weights-only deserialization from the exact verified bytes. Local saves publish a separate manifest after re-reading the immutable artifact.
+- `python3 -m compileall -q liferaft tests` passed. Foundation regressions passed 6/6. `python3 -m liferaft train --steps 200 --checkpoint-every 10 --seed 1729` exited 2 at the missing Torch dependency. `python3 -m unittest discover -s tests -v` passed the six foundation tests and errored while importing the training suite with `ModuleNotFoundError: No module named 'torch'`. `python3 -m liferaft doctor --training --json --redact` exited 1 as designed.
+- Verified the published CPython 3.13 Apple Silicon wheel and PyTorch's CPU index. The shell could not reach PyPI and the browser reported `ERR_BLOCKED_BY_CLIENT` at the official wheel download. No test losses, optimizer updates, checkpoint bytes, or timing were observed.
+- Team step. Open Terminal and run the README installation commands in this repo's `.venv`. If the existing pinned foundation packages are already installed globally on this Mac, `python3 -m venv --system-site-packages .venv` is sufficient to expose them. The verification is `.venv/bin/python -m liferaft doctor --training --json --redact` reporting `cpu_verified: true`. If PyPI is unreachable from the normal Terminal, use a permitted hotspot or the second laptop. No passwords, service secrets or hardware needed.
+- No Pi or microcontroller was powered, wired, or modified during this phase. Cross-device recovery, hosted services and physical evidence remain untested.
+- Next. Run `.venv/bin/python -m unittest discover -s tests -v`, capture the actual 200-step and 120→121 numerical evidence and only then move to Phase 2.
+
+### 2026-11-07 — Phase 1 — DONE
+
+- The operator installed PyTorch 2.15.0 in the project virtual environment. `.venv/bin/python -m liferaft doctor --training --json --redact` exited 0 and verified CPU execution on macOS ARM64 with Python 3.13.5. This clears the previous dependency blocker.
+- `.venv/bin/python -m unittest discover -s tests -v` passed all 12 tests in 6.746 seconds. Phase 0 offline checks passed again. The Phase 1 suite verified exact optimizer tensors, model weights, and loss trajectory against the 200-step baseline. It also verified RNG and cursor restore, wrong identity and seed rejection, schema and model incompatibility rejection, hash and truncation rejection before loading, and preservation of the previous checkpoint after an interrupted write.
+- `npm ci --offline --ignore-scripts --cache .liferaft/npm` and `./node_modules/.bin/tsc --strict --noEmit web/src/lib/contracts.ts` passed.
+- Retained a second real CLI run under `.liferaft/phase1-proof-ng3ekfdy/`. The commands were `.venv/bin/python -m liferaft train --steps 200 --seed 1729 --job phase1-proof --checkpoint-every 10`, the same command with `--steps 120`, then `.venv/bin/python -m liferaft resume --steps 200 --seed 1729 --job phase1-proof --checkpoint-every 10 --checkpoint <step-120 .pt path>`. The baseline used a separate state directory from the primary and resumed runs.
+- The baseline started at loss 0.9492214918. The separate resume process started at step 121 with loss 0.0136791244 and completed step 200 at loss 0.0146676246. The maximum loss difference across all 200 steps was 0. The saved step-120 artifact was 46,192 bytes and its independently computed SHA-256 was `f26d68a90dfdcf43898ba210c7740013faf256a4f881a678587a2ba5137e013c`.
+- This proves same-machine checkpoint and resume. Hardware is still unset and hosted services and physical cross-device recovery remain unverified. No human action is needed for Phases 0 or 1. The next phase is automated local failover between two processes. Pi and ESP32 setup will be guided separately when those phases are reached.
+
+### 2026-11-07 — Phase 2 — DONE
+
+- Added `liferaft/failover.py`, `liferaft/worker.py`, `liferaft/scenario.py` and `tests/test_failover.py`. Wired the worker and demo commands into `liferaft/cli.py` and updated the README and operational runbook.
+- SQLite transactions serialize lease renewals, claims, checkpoint commits and their audit events. A worker checks its lease before continuing, and the coordinator fences stale writers. The standby restores a committed checkpoint and must report a real first optimizer step at the next step number with the selected SHA-256 before recovery is marked verified.
+- Default timing is a 2-second heartbeat, 12-second lease and 6-second standby freshness window. The crash test targets only its dedicated primary subprocess. RTO in the report starts at incident detection. For crashes, the journal also records the earlier process kill. Crash RPO stays unknown when the exact last step is unavailable.
+- `.venv/bin/python -m compileall -q liferaft tests` and `git diff --check` passed. `.venv/bin/python -m unittest discover -s tests -v` passed all 19 tests in 43.098 seconds. Both independent-process demos matched uninterrupted PyTorch loss exactly for every resumed step. Negative tests verified blocked recovery without a ready standby or committed checkpoint, actual resume from the prior checkpoint after corruption, one winner for racing claims, rejected stale heartbeat/commit, and request replay without extra handoffs or lease extensions.
+- Both standalone commands below exited 0. The standby completed step 70 under epoch 2 in each run. The evidence includes checkpoint hashes, worker logs and the verified event chain.
+- `.venv/bin/python -m liferaft demo --scenario cooling-test` resumed from checkpoint 32 at step 33. Detection to resume was 2.190 s, trigger to resume was 2.189 s, and lost steps were 0. Checkpoint SHA-256 `18f4c76e6f16981c54c0df970c86af3e122b68e3a9fde30a0e05c713f6ecca4c`. Evidence `.liferaft/phase2-dibgt9me/evidence.json`.
+- `.venv/bin/python -m liferaft demo --scenario worker-crash` resumed from checkpoint 20 at step 21. Detection to resume was 0.707 s, trigger to resume was 12.206 s, and lost steps were unknown. Checkpoint SHA-256 `5b2dfdf045301bd823848cd432e8ed818e20e3335fabaa898a0ce9d87ba61883`. Evidence `.liferaft/phase2-df10wcse/evidence.json`.
+- This gate covers one handoff on one Mac using a shared local artifact directory. Atlas, cross-device HTTPS, network partitions and physical hardware are outside this proof. No human action was needed for Phase 2.
+- Next phase. Use MongoDB Atlas for hosted job ownership and private checkpoint storage, with a separately hosted HTTPS coordinator. The team selected Atlas before cloud implementation. Phase 3 will align the earlier Supabase-specific handoff documentation with that choice and verify the hosted path.

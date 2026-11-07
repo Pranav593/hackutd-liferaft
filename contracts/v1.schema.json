@@ -1,0 +1,452 @@
+{
+  "CheckpointManifest": {
+    "additionalProperties": false,
+    "properties": {
+      "checkpoint_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Checkpoint Id",
+        "type": "string"
+      },
+      "committed_utc": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Committed Utc"
+      },
+      "config_fingerprint": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Config Fingerprint",
+        "type": "string"
+      },
+      "created_utc": {
+        "format": "date-time",
+        "title": "Created Utc",
+        "type": "string"
+      },
+      "dataset_fingerprint": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Dataset Fingerprint",
+        "type": "string"
+      },
+      "job_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Job Id",
+        "type": "string"
+      },
+      "lease_epoch": {
+        "minimum": 0,
+        "title": "Lease Epoch",
+        "type": "integer"
+      },
+      "model_version": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Model Version",
+        "type": "string"
+      },
+      "path": {
+        "title": "Path",
+        "type": "string"
+      },
+      "run_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
+      },
+      "sha256": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Sha256",
+        "type": "string"
+      },
+      "size_bytes": {
+        "exclusiveMinimum": 0,
+        "maximum": 10485760,
+        "title": "Size Bytes",
+        "type": "integer"
+      },
+      "status": {
+        "default": "VERIFIED",
+        "enum": [
+          "VERIFIED",
+          "COMMITTED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "step_completed": {
+        "exclusiveMinimum": 0,
+        "title": "Step Completed",
+        "type": "integer"
+      },
+      "worker_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Worker Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "checkpoint_id",
+      "job_id",
+      "run_id",
+      "step_completed",
+      "worker_id",
+      "lease_epoch",
+      "path",
+      "sha256",
+      "size_bytes",
+      "dataset_fingerprint",
+      "config_fingerprint",
+      "model_version",
+      "created_utc"
+    ],
+    "title": "CheckpointManifest",
+    "type": "object"
+  },
+  "IncidentEvent": {
+    "$defs": {
+      "JsonValue": {}
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_utc": {
+        "format": "date-time",
+        "title": "Created Utc",
+        "type": "string"
+      },
+      "event_id": {
+        "format": "uuid",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event_type": {
+        "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+        "title": "Event Type",
+        "type": "string"
+      },
+      "evidence": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "title": "Evidence",
+        "type": "object"
+      },
+      "incident_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Incident Id"
+      },
+      "job_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Job Id",
+        "type": "string"
+      },
+      "lease_epoch": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Lease Epoch",
+        "type": "integer"
+      },
+      "message": {
+        "maxLength": 512,
+        "title": "Message",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
+      },
+      "severity": {
+        "default": "INFO",
+        "enum": [
+          "INFO",
+          "WARNING",
+          "ERROR"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "source_type": {
+        "enum": [
+          "measured",
+          "injected",
+          "derived",
+          "provider",
+          "simulated"
+        ],
+        "title": "Source Type",
+        "type": "string"
+      },
+      "trigger_event_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Trigger Event Id"
+      },
+      "worker_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Worker Id"
+      }
+    },
+    "required": [
+      "event_id",
+      "job_id",
+      "created_utc",
+      "event_type",
+      "source_type",
+      "message"
+    ],
+    "title": "IncidentEvent",
+    "type": "object"
+  },
+  "SensorEvent": {
+    "additionalProperties": false,
+    "properties": {
+      "ambient_temp_c": {
+        "anyOf": [
+          {
+            "maximum": 125,
+            "minimum": -55,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Ambient Temp C"
+      },
+      "ambient_valid": {
+        "title": "Ambient Valid",
+        "type": "boolean"
+      },
+      "bridge_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Bridge Id",
+        "type": "string"
+      },
+      "bridge_received_utc": {
+        "format": "date-time",
+        "title": "Bridge Received Utc",
+        "type": "string"
+      },
+      "device_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Device Id",
+        "type": "string"
+      },
+      "event_id": {
+        "format": "uuid",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event_type": {
+        "enum": [
+          "TELEMETRY",
+          "COOLING_FAILURE_TEST"
+        ],
+        "title": "Event Type",
+        "type": "string"
+      },
+      "protocol_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Protocol Version",
+        "type": "integer"
+      },
+      "sequence": {
+        "minimum": 0,
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "source_type": {
+        "enum": [
+          "measured",
+          "injected",
+          "simulated"
+        ],
+        "title": "Source Type",
+        "type": "string"
+      }
+    },
+    "required": [
+      "event_id",
+      "device_id",
+      "bridge_id",
+      "sequence",
+      "source_type",
+      "event_type",
+      "ambient_valid",
+      "bridge_received_utc"
+    ],
+    "title": "SensorEvent",
+    "type": "object"
+  },
+  "WorkerHeartbeat": {
+    "$defs": {
+      "WorkerCheckpoint": {
+        "additionalProperties": false,
+        "properties": {
+          "last_committed_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Committed Id"
+          }
+        },
+        "title": "WorkerCheckpoint",
+        "type": "object"
+      },
+      "WorkerSystem": {
+        "additionalProperties": false,
+        "properties": {
+          "arch": {
+            "title": "Arch",
+            "type": "string"
+          },
+          "cpu_temp_valid": {
+            "default": false,
+            "title": "Cpu Temp Valid",
+            "type": "boolean"
+          },
+          "os": {
+            "title": "Os",
+            "type": "string"
+          },
+          "pi_cpu_temp_c": {
+            "anyOf": [
+              {
+                "maximum": 110,
+                "minimum": -20,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pi Cpu Temp C"
+          }
+        },
+        "required": [
+          "os",
+          "arch"
+        ],
+        "title": "WorkerSystem",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "checkpoint": {
+        "$ref": "#/$defs/WorkerCheckpoint"
+      },
+      "client_utc": {
+        "format": "date-time",
+        "title": "Client Utc",
+        "type": "string"
+      },
+      "job_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Job Id",
+        "type": "string"
+      },
+      "lease_epoch": {
+        "minimum": 0,
+        "title": "Lease Epoch",
+        "type": "integer"
+      },
+      "protocol_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Protocol Version",
+        "type": "integer"
+      },
+      "request_id": {
+        "format": "uuid",
+        "title": "Request Id",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "RUNNING",
+          "STANDBY",
+          "PAUSED",
+          "STOPPED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "step_completed": {
+        "minimum": 0,
+        "title": "Step Completed",
+        "type": "integer"
+      },
+      "system": {
+        "$ref": "#/$defs/WorkerSystem"
+      },
+      "worker_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Worker Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "request_id",
+      "job_id",
+      "worker_id",
+      "lease_epoch",
+      "client_utc",
+      "step_completed",
+      "status",
+      "system",
+      "checkpoint"
+    ],
+    "title": "WorkerHeartbeat",
+    "type": "object"
+  }
+}
