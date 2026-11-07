@@ -40,3 +40,6 @@ Never control the Pi 5 power supply, its cooling fan or a laptop's power with th
 A real job runs on the Pi 5 (preferred, after compatibility checks) or on Laptop A (fallback); checkpoints move to authenticated private cloud storage; a deliberately injected incident triggers a recovery policy; another physical computer fetches the latest valid checkpoint and resumes training; measured training progress and integrity proof appear in the console; a real Nemotron tool-call trace and a real Photon round trip are available when credentials are configured; the ESP32 button/temperature sensor and OLED participate in the live workflow. All steps have automated tests and reproducible setup docs.
 
 The package stays focused on engineering, physical setup, testing, and operation.
+
+## Upscale layer
+See `docs/UPSCALE_PLAN.md` (idea + judging fit), `docs/UI_DESIGN_SYSTEM.md` (visuals), `docs/DEMO_SCRIPT_AND_SUBMISSION.md` (video + Devpost), and open `web/demo/index.html` in a browser for the cockpit demo (simulated replay, clearly labeled).

@@ -143,3 +143,9 @@
 **Actual metrics / screenshots / evidence location (redacted):**
 
 **Next phase:**
+
+## Phase U — Upscale layer (presentation + idea) — IN_PROGRESS
+- [x] `docs/UPSCALE_PLAN.md`, `docs/UI_DESIGN_SYSTEM.md`, `docs/DEMO_SCRIPT_AND_SUBMISSION.md`
+- [x] `web/demo/index.html` simulated cockpit (SIMULATED badge; no live data claimed)
+- [ ] Port cockpit to Next.js `web/` and bind to real events
+- [ ] Add `prev_hash` chain + Verify button, Lifeboat Score from real telemetry
