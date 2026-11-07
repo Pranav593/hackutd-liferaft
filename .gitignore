@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.venv/
+.liferaft/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+node_modules/
+.next/
+*.sqlite*
+*.pt
+.DS_Store

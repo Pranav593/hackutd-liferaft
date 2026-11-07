@@ -10,8 +10,9 @@ This file tells Codex which commands and everyday procedures to *implement*. Com
 liferaft doctor --redact
 liferaft train --mode local --job demo-job-001 --steps 200 --seed 1729 --checkpoint-every 10
 liferaft resume --mode local --job demo-job-001 --checkpoint <path-to-actual-owned-checkpoint>
-liferaft scenario local-failover --job demo-job-001
-liferaft tests --scope local
+liferaft demo --scenario cooling-test
+liferaft demo --scenario worker-crash
+python -m unittest discover -s tests -v
 ```
 
 Expected: real numerical loss, checkpoint SHA and resume step, not a fake UI. Failed checkpoint test yields refusal, not silent restart from zero. Use own generated dataset.
