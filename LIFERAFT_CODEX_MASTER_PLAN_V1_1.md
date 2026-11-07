@@ -1,11 +1,21 @@
 # LIFERAFT — Codex Master Engineering Specification
 
-**HackUTD 2026 · November 7–8, 2026 · Version 1.0 · Status: implementation brief**  
+**HackUTD 2026 · November 7–8, 2026 · Version 1.1 (Devpost-verified) · Status: implementation brief**  
 **Intended readers:** Codex and the student development team  
 **Primary sponsor targets:** NMC² (data-center resilience), NVIDIA Nemotron (agentic multi-step action), Photon (operator communications)  
 **Non-negotiable environment:** two student laptops, unreliable/campus-isolated Wi-Fi, hardware not yet available, beginner hardware experience, CPU-capable demo.
 
 > **Core mission:** Demonstrate a real training job on Laptop A saving verifiable checkpoints; when Laptop A loses its worker process or a hardware emergency occurs, Laptop B loads the last confirmed checkpoint and **continues the same training job**. Nemotron investigates and coordinates; Photon provides a real two-way operator interface. The physical sensor system is optional for first delivery and must not block the software.
+
+## URGENT — Devpost submission gates (verified from Nov 7, 2026 PDF)
+
+**Do not wait until Phase 9 to register.** The team **must submit/register on Devpost by Saturday, Nov 7 at 11:00 PM CST**, even if the project is unfinished. The submission is editable until **Sunday, Nov 8 at 12:00 PM CST**, when editing closes. Source: uploaded *HackUTD 2026: ZeroDay* Devpost PDF, p. 4.
+
+Final project entry requires **title, description, code repository or ZIP, chosen challenges/tracks, and a demo-only video with a maximum length of 2 minutes**. Create/verify the submission early and save its URL. Appoint a human submission owner; do not rely on Codex to publish or upload anything without the team's approval and credentials.
+
+**Allowed track combination:** up to **3 sponsor tracks** (NMC², NVIDIA, Photon), **1 HackUTD track** (choose Hardware OR Design OR Virality), and **any number of [MLH] tracks**. General Track is automatic; Beginner Track automatic if **more than 66%** of team members are first-time hackers. Source: Devpost PDF p. 4. Do not silently select extra tracks or claim eligibility without the corresponding integration being demonstrably present.
+
+**Today's priorities:** P0 genuine checkpoint/resume; P0 early Devpost registration; P0 cross-laptop rescue over outbound HTTPS; P0 one working Nemotron tool sequence and one real Photon interaction; P0 2-minute demo capture and upload; hardware and bonus tracks only after those milestones. See `DEVPOST_2026_COMPLIANCE.md` for detailed submission actions, prize corrections, criteria, and cuts.
 
 ## 0. Read this first — Codex operating contract
 
@@ -46,11 +56,36 @@ A live judge sees: a nontrivial PyTorch job running and a real loss curve; real 
 
 **Challenge-eligibility caveat:** The team has confirmed three company tracks are allowed. Keep NMC², NVIDIA and Photon as sponsor targets, and verify any additional MLH categories with an on-site MLH representative before claiming eligibility.
 
-### 1.2 MLH research (not equivalent to confirmed 2026 HackUTD rules)
+### 1.2 Authoritative HackUTD 2026 Devpost requirements (new evidence)
 
-The user-requested `https://www.mlh.com/hackutd` could not be retrieved directly. The indexed MLH HackUTD page reachable at https://www.mlh.com/events/hackutd-ae and its https://www.mlh.com/events/hackutd-ae/prizes describes an **event that ended November 8–9, 2025**. Its displayed MLH categories are Gemini API, ElevenLabs, Solana, Vultr, DigitalOcean and GoDaddy Registry. The past event also lists Best Hardware, Best Startup, and other event-specific prizes. **Do not label these as confirmed HackUTD 2026 prize tracks.** LIFERAFT could plausibly suit Hardware/Startup, and DigitalOcean/Vultr only if actually deployed there; changing the reliable architecture purely for an unconfirmed extra prize is not advisable.
+**Evidence priority:** The user-provided Devpost PDF, captured Nov 7, 2026 at 2:49 PM local time (17 pages), is the direct evidence for 2026 **submission rules, current prizes, MLH listings, and judging criteria**. It supersedes the old 2025 MLH page for this event. The Devpost snapshot links to separate Sponsor Tracks and General Tracks challenge statements but does **not itself contain the complete sponsor prompt text**; continue to use the team-provided challenge statement sheet for NMC², NVIDIA and Photon pending verification of the linked challenge pages.
 
-HackUTD event timing: initial Devpost deadline **Saturday November 7 at 11 PM CT**, final submission **Sunday November 8 at noon CT** on https://zeroday.hackutd.co/. The website lists an NMC workshop **Saturday 4:20–5:05 PM CT**. Confirm any last-minute changes at the event.
+**Submission:** first submit/team registration by **11:00 PM CST Saturday Nov 7**; finalized **12:00 PM CST Sunday Nov 8**, no edits afterward. Required: (i) project title & description, (ii) repository URL or ZIP, (iii) selected challenge tracks, (iv) **DEMO-ONLY video ≤120 seconds**. Source: Devpost PDF p. 4.
+
+**Tracks:** up to **three sponsor** tracks + **one HackUTD** track among Best Hardware, Best Design, Virality. Any number of `[MLH]` tracks may be entered. General Track automatically applies; teams with **more than 66% first-time hackers** are automatically considered for Beginner Track. Source: Devpost PDF p. 4. Keep our three chosen sponsor tracks. Choose **Best Hardware only if the sensor-triggered demonstration works**, otherwise **Best Design** if the user experience is exceptional; do not submit both. The team must explicitly confirm the fourth track selection.
+
+**Current prize details (not acceptance criteria):**
+
+- NMC²: 1st AirPods Max Gen 2; 2nd Apple Watch Series 12; 3rd Echo Show 11. Devpost p. 10.
+- NVIDIA: **1st = 2× RTX 5080 GPUs + $200 Brev credits per team; 2nd = 1× RTX 5080 + $200 Brev credits per team.** This clarifies/corrects the older sheet's aggregate '3 GPUs + $400 credits' phrasing. Devpost p. 10.
+- Photon: 1st $400 cash + $300 API credits + interview fast-track; 2nd $200 cash + $100 credits; **Voice Call Winner = $300 cash + $100 credits**. Devpost p. 11.
+- Best Hardware: Electric Scooter; Best Design: LEGO sets; Virality: portable monitors. Devpost p. 11.
+
+**Additional 2026 [MLH] listings visible in Devpost PDF pp. 8–9:**
+
+- `Build Your Hackathon A-Team with SpaceXSI`: **Cursor must be the core AI coding agent**, integrate a **Grok Bot automation**, describe both in Devpost, and opt into the raffle. **Our Codex-first workflow does not qualify by default; do not claim it.**
+- `Best Use of Gemini API`: requires actual Gemini integration; adding this without a useful distinct role weakens NVIDIA/Nemotron focus.
+- `Best Use of Solana`: unrelated to the incident-rescue problem; skip.
+- `Best Use of Tiger Data`: plausible for high-frequency telemetry and time-series analytics, but Supabase is already the P0 control plane. Do **not** add a second database until the rescue, messaging and demo are reliable.
+- `Best Use of Vultr`: potentially compatible with hosting a production relay or service; do not replace a working Supabase design for this prize alone. Evaluate only if hosting infrastructure is genuinely needed and credits/setup are available.
+- `Best Use of MongoDB Atlas`: another database integration; no reason to replace a proven transactional coordinator.
+- `Best Domain Name from GoDaddy Registry`: optional only if a domain is actually part of the working demonstration; no need to spend P0 time.
+
+**Judging criteria:** Innovation & Creativity, Technical Complexity, Completeness, Design, Impact, Presentation. Source: Devpost PDF p. 12. `docs/sponsor-evidence.md` should map each to observable metrics and a real demo moment: verified save/resume across machines; SHA-256 and epoch fencing; actual agent tool calls; two-way Photon delivery; operator clarity; measured recovery time and loss of progress; an understandable commercial story for NMC².
+
+### 1.3 Previous MLH page — no longer current for this event
+
+The MLH 2025 HackUTD page referenced in v1.0 is historical context only. **Do not use its prize list or categories for the 2026 submission.** The current 2026 Devpost snapshot is the directly provided evidence. MLH-specific eligibility may still require additional sponsor terms and completion steps not reproduced in this PDF; check official track details before opting in.
 
 ## 2. Product definition and differentiators
 
@@ -597,10 +632,14 @@ Tasks:
 - Run `pytest -q`, `ruff check`, `npm run build`, full end-to-end tests.
 - Conduct at least three consecutive recovery demos. Save logs and metrics in `docs/demo-runs/` with redacted secrets.
 - Test hard kill, graceful rescue, corrupt checkpoint fallback, cloud timeouts, Photon failure, Nemotron failure, two contenders and stale lease.
-- Produce `docs/demo-script.md` (60–90-second demo), architecture diagram, sponsor mapping, README setup, QR code to demo, and short backup video **of an actual working run**.
-- Prepare submission before the 11 PM initial deadline and final deadline 12 PM Sunday; verify actual current hackathon instructions on-site.
+- Record a **demo-only video ≤120 seconds** showing a genuine training job, remote verified checkpoint, induced failure, recovery on Laptop B, Nemotron tool evidence, and Photon interaction. **Do not put a slide pitch or fabricated footage in this video.** Save a ≤120s file and confirm its duration with a media inspection command before uploading.
+- Produce `docs/demo-script.md` with the ≤120-second timestamped video shots, plus a separate in-person 3-minute judge story, architecture diagram, sponsor mapping, README setup, and a backup recording of an actual working run.
+- **Registration is a parallel P0 administrative task, not a Phase 9 step:** submit team/project on Devpost by **Saturday Nov 7, 11:00 PM CST** even if unfinished. Assign a team member to verify project URL, team members and initial form status. Finish final project title/description, repo or ZIP, sponsor track selections, optional ONE HackUTD track, and demo-only video by **Sunday Nov 8, 12:00 PM CST** with no late edits.
+- Map the six judges' criteria to verifiable proof: innovation, technical complexity, completeness, design, impact, presentation. Keep screenshot/log examples in `docs/judging-evidence.md`.
+- Optional Photon Voice Call Winner stretch **only after real text messaging and core rescue work**: verify actual voice capability in Photon 2.0 account and implement a real incident call with delivery/result evidence. No fake call claims; never let voice delay submission.
+- Evaluate optional `[MLH]` tracks only if already satisfied by useful, actually integrated technology. Never divert critical work to add a second database or switch coding agent for a raffle.
 
-**Acceptance:** Team can run a reliable 3-minute judge story, explain the limits and showcase tool-call logs, phone conversation, and checkpoint integrity.
+**Acceptance:** Team has a submitted Devpost entry, a valid **≤2-minute demo-only video**, a code repository/ZIP, the correct selected tracks, repeatable recovery proof, and a separate concise judge presentation. No asserted integration is merely simulated unless labeled.
 
 ## 14. Config, CLI and commands to build toward
 
@@ -686,25 +725,22 @@ These are **target CLIs for Codex to implement**, not commands that exist before
 
 **Minimum viable before judging:** T01, T03, T05, T06, T08, T09, T10, T14 should be demonstrably reliable. Phase 7/8 sponsor requirements additionally need real Photon + hardware when available.
 
-## 16. Demo storyboard: the WOW moment
+## 16. Submission video storyboard — strict 2-minute maximum
 
-**0:00–0:20** — Show two labeled laptops and one live chart. "AI training has been running. We protect progress, not just hardware."
+Devpost specifies the submitted video should **ONLY be a demo** and must be **maximum 2 minutes**. Source: uploaded Devpost PDF p. 4. Record real devices and software; avoid a slide-deck pitch or explaining the whole business case in the required video.
 
-**0:20–0:35** — Point out the backup is idle and a verified checkpoint is stored remotely (step, hash, age).
+| Video time | What viewers must actually see | Capture requirement |
+| --- | --- | --- |
+| 0:00–0:15 | Both labeled laptops; active job on A; B available | Real job ID and live step/loss values |
+| 0:15–0:30 | Latest checkpoint recorded remotely; integrity hash/committed step | Checkpoint manifest visible, not placeholder |
+| 0:30–0:45 | Press Arduino fault button or terminate A's job | Clearly distinguish simulated cooling warning from actual worker crash |
+| 0:45–1:10 | A heartbeat missed → controller validates checkpoint → B acquires lease → B restarts at saved step | Capture actual B process logs and live continuity chart |
+| 1:10–1:30 | Nemotron uses at least two real diagnostic tools and reports evidence | Show tool-call trace; don't imply AI itself made unsafe decisions |
+| 1:30–1:48 | Photon sends a real message; operator sends STATUS/WHY and receives response | Device footage or authenticated delivery status; blur personal info |
+| 1:48–1:58 | Recovered workload advances; actual recovery time and lost steps shown | Verify progress is genuine; stop below 2:00 |
 
-**0:35–0:45** — Press the physical emergency button for controlled mode **or** kill the primary worker process for hard-crash mode. Show telemetry and event live.
+**Parallel in-person pitch (not part of submitted video):** why NMC² would deploy it; hardware/environment constraints; checkpoint-aware workload limits; differentiator from existing schedulers; six judging criteria. A recorded demo is a backup, not evidence that live integrations work unless from the same real build.
 
-**0:45–1:05** — Watch live timeline: A unhealthy → lease expires → B claims epoch → artifact SHA-256 verified → training continues. Highlight real loss curve reconnecting across the discontinuity.
-
-**1:05–1:25** — Photon sends a real text; operator replies `WHY`; message returns incident evidence.
-
-**1:25–1:45** — Open Nemotron investigation audit: multiple tools, evidence grounded in checkpoint/heartbeat data, verification after recovery. Explain adaptive checkpointing reduces lost progress when risk rises.
-
-**1:45–2:10** — Show outcome metrics: "Recovered from step X, only Y steps lost, took Z seconds," with readings from current test, not predefined numbers.
-
-**Remaining pitch time** — Why NMC² would benefit (GPU customers' valuable training progress; fleet operations), limits (checkpoint-aware jobs), existing competition (schedulers/checkpointing exist), and differentiated integration (physical risk → preemptive checkpoint cadence → verified continuity → AI & two-way humans).
-
-Bring a backup **recording of a genuine successful run**, not a prerecorded fake demo. Do not depend on a working phone signal for the core recovery to function.
 
 ## 17. Risk register and mitigation
 
@@ -753,6 +789,7 @@ Start now, without waiting for hardware or sponsor API keys:
 
 ## 20. Reference documentation (checked November 7, 2026)
 
+- HackUTD 2026 Devpost rules/prizes/judging (user PDF, pp. 4, 8–12): https://hackutd-zeroday.devpost.com/
 - HackUTD 2026 schedule: https://zeroday.hackutd.co/
 - MLH previous HackUTD event (2025): https://www.mlh.com/events/hackutd-ae
 - MLH previous event prize listing (2025): https://www.mlh.com/events/hackutd-ae/prizes
@@ -775,4 +812,4 @@ Start now, without waiting for hardware or sponsor API keys:
 
 # Immediate Codex instruction
 
-**Implement PHASE 0 and PHASE 1 now.** Read this specification and `AGENTS.md`. Initialize the project, create the deterministic PyTorch training loop, save versioned atomic checkpoints including model and optimizer states, implement reload from checkpoint, add tests proving identical continuity after resume, and demonstrate execution entirely locally with no APIs or hardware. Update `PROGRESS.md` with concrete commands, tests and outcomes. Do not start UI mockups or external integrations until the resume test passes. When Phase 1 is complete, report changed files, exact commands used, test results, and the remaining blockers for Phase 2.
+**FIRST verify the team is registered/submitted on Devpost before the 11 PM Saturday deadline, or assign that action to the submission owner immediately. Then implement PHASE 0 and PHASE 1 now.** Read this specification and `AGENTS.md`. Initialize the project, create the deterministic PyTorch training loop, save versioned atomic checkpoints including model and optimizer states, implement reload from checkpoint, add tests proving identical continuity after resume, and demonstrate execution entirely locally with no APIs or hardware. Update `PROGRESS.md` with concrete commands, tests and outcomes. Do not start UI mockups or external integrations until the resume test passes. When Phase 1 is complete, report changed files, exact commands used, test results, and the remaining blockers for Phase 2.
