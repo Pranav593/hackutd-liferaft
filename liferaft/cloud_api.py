@@ -8,19 +8,20 @@ import os
 import re
 import time
 from threading import Lock
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import Field, TypeAdapter, ValidationError
 
 from .artifacts import IntegrityError, verify_data
 from .atlas import AtlasRepository
-from .contracts import CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
+from .contracts import ButtonEvent, CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
 from .failover import JobSpec, JobPlan
 
 PRIMARY = "laptop-primary"
 STANDBY = "laptop-standby"
 DEVICE_IDS = {"primary": PRIMARY, "standby": STANDBY}
 WORKERS = frozenset(DEVICE_IDS)
+REQUIRED_ROLES = WORKERS | {"operator"}
 TOKEN_PATTERN = re.compile(r"[a-f0-9]{64}")
 LOGGER = logging.getLogger(__name__)
 MAX_BODY = ((MAX_CHECKPOINT_BYTES + 2) // 3) * 4 + 8192
@@ -52,10 +53,10 @@ class APIError(Exception):
 
 
 def application(repository, credentials, *, drills=False):
-    if (set(credentials) != {"primary", "standby", "operator"}
+    if (set(credentials) not in (REQUIRED_ROLES, REQUIRED_ROLES | {"gateway"})
             or any(not TOKEN_PATTERN.fullmatch(token) for token in credentials.values())
-            or len(set(credentials.values())) != 3):
-        raise ValueError("configure three distinct 64-character hex credentials")
+            or len(set(credentials.values())) != len(credentials)):
+        raise ValueError("configure distinct 64-character hex credentials for each role")
 
     rate_lock = Lock()
     windows = {}
@@ -72,6 +73,14 @@ def application(repository, credentials, *, drills=False):
         def allowed(roles):
             if role not in roles:
                 raise APIError("403 Forbidden", "ROLE_DENIED")
+
+        if action == "button":
+            allowed({"gateway"})
+            if not drills:
+                raise APIError("403 Forbidden", "DRILL_DISABLED_OR_INVALID")
+            button = ButtonEvent.model_validate(args)
+            request_id = uuid5(NAMESPACE_URL, f"liferaft:button:{job}:{button.device_id}:{button.seq}:{button.uptime_ms}")
+            return repository.execute(job, lambda policy: policy.request_rescue(job, request_id, button=button))
 
         if action == "create":
             allowed({"operator"})
@@ -207,7 +216,8 @@ def from_environment():
     uri = os.environ.get("LIFERAFT_ATLAS_URI", "")
     if not uri.startswith("mongodb+srv://"):
         raise ValueError("configure the Atlas SRV URI on the hosted coordinator")
-    return application(AtlasRepository(uri), {
-        role: os.environ.get(f"LIFERAFT_{role.upper()}_TOKEN", "")
-        for role in ("primary", "standby", "operator")
-    }, drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1")
+    credentials = {role: os.environ.get(f"LIFERAFT_{role.upper()}_TOKEN", "") for role in REQUIRED_ROLES}
+    gateway_token = os.environ.get("LIFERAFT_GATEWAY_TOKEN")
+    if gateway_token:
+        credentials["gateway"] = gateway_token
+    return application(AtlasRepository(uri), credentials, drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1")

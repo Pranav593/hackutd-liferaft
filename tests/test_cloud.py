@@ -14,11 +14,15 @@ from uuid import uuid4
 from liferaft.cloud import CloudClient, CloudWorkerCoordinator
 from liferaft.cloud_api import PRIMARY, STANDBY, application
 from liferaft.artifacts import LocalArtifactStore
+from liferaft.bridge import wait_for_button
 from liferaft.cli import main
 from liferaft.contracts import CheckpointManifest, WorkerCheckpoint, WorkerHeartbeat, WorkerSystem, utc_now
 from liferaft.failover import JobSpec, LocalFailover
 
-TOKENS = {"primary": "a" * 64, "standby": "b" * 64, "operator": "c" * 64}
+TOKENS = {"primary": "a" * 64, "standby": "b" * 64, "operator": "c" * 64, "gateway": "d" * 64}
+BUTTON = {"protocol_version": 1, "device_id": "esp32-s3-01", "seq": 18, "uptime_ms": 30802,
+          "ambient_temp_c": None, "ambient_valid": False, "button_pressed": True,
+          "event_type": "COOLING_FAILURE_TEST", "source_type": "injected"}
 
 
 class LocalRepository:
@@ -89,6 +93,35 @@ class CloudTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             application(self.repository, {role: "a" * 64 for role in TOKENS})
 
+    def test_button_requires_enabled_drill_and_scoped_gateway(self):
+        for role, expected in (("unknown", 401), ("operator", 403), ("standby", 403), ("primary", 403)):
+            with self.subTest(role=role):
+                self.assertEqual(self.request("button", role=role, **BUTTON)[0], expected)
+        for fields in ({"source_type": "measured"}, {"device_id": "other"}, {"ambient_temp_c": 25},
+                       {"button_pressed": 1}, {"protocol_version": True}, {"relay": True}):
+            with self.subTest(fields=fields):
+                self.assertEqual(self.request("button", role="gateway", **(BUTTON | fields))[0], 422)
+        for action in ("create", "status", "events", "rescue", "heartbeat", "claim", "download", "commit"):
+            with self.subTest(action=action):
+                self.assertEqual(self.request(action, role="gateway")[0], 403)
+        self.app = application(self.repository, TOKENS)
+        self.assertEqual(self.request("button", role="gateway", **BUTTON)[0], 403)
+        self.app = application(self.repository, {role: token for role, token in TOKENS.items() if role != "gateway"},
+                               drills=True)
+        self.assertEqual(self.request("button", role="gateway", **BUTTON)[0], 401)
+
+    def test_serial_rejects_oversized_and_unrelated_frames(self):
+        frame = json.dumps(BUTTON).encode() + b"\r\n"
+        chunks = iter([b"x" * 513, frame, b"LIFERAFT_BOOT_OK\n", frame[:15], b"", frame[15:]])
+
+        class Connection:
+            def read_until(self, *, size):
+                return next(chunks)
+
+        self.assertEqual(wait_for_button(Connection(), time.monotonic() + 1).model_dump(), BUTTON)
+        with self.assertRaises(TimeoutError):
+            wait_for_button(Connection(), time.monotonic())
+
     def test_create_cli_persists_workload_fingerprint(self):
         from liferaft.workload import CONFIG_FINGERPRINT
 
@@ -133,7 +166,8 @@ class CloudTests(unittest.TestCase):
                                       data=b64encode(b"bad").decode())[0], 422)
         self.assertTrue(primary.commit_checkpoint(manifest))
         self.assertEqual(self.request("download", role="standby", checkpoint_id=manifest.checkpoint_id, epoch=1)[0], 403)
-        self.call("rescue", request_id=str(uuid4()))
+        incident = self.call("button", role="gateway", **BUTTON)
+        self.assertEqual(self.call("button", role="gateway", **BUTTON), incident)
         heartbeat = WorkerHeartbeat(request_id=uuid4(), job_id=spec.job_id, worker_id=PRIMARY, lease_epoch=1,
                                     client_utc=utc_now(), step_completed=10, status="RUNNING",
                                     system=WorkerSystem(os="test", arch="test"), checkpoint=WorkerCheckpoint())
@@ -149,4 +183,10 @@ class CloudTests(unittest.TestCase):
         self.assertFalse(standby.mark_first_resumed_step(spec.job_id, STANDBY, 2, 10, 0.5, offered.sha256))
         self.assertTrue(standby.mark_first_resumed_step(spec.job_id, STANDBY, 2, 11, 0.5, offered.sha256))
         self.assertEqual(self.call("status")["resume_step"], 11)
-        self.assertTrue(self.call("events")["chain_valid"])
+        journal = self.call("events")
+        self.assertTrue(journal["chain_valid"])
+        received, = [event for event in journal["events"] if event["event_type"] == "SENSOR_EVENT_RECEIVED"]
+        rescue, = [event for event in journal["events"] if event["event_type"] == "RESCUE_REQUESTED"]
+        self.assertEqual(received["source_type"], "injected")
+        self.assertEqual(received["incident_id"], incident)
+        self.assertEqual(rescue["trigger_event_id"], received["event_id"])

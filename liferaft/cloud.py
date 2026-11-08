@@ -102,15 +102,17 @@ class CloudWorkerCoordinator:
 
 def install_commands(subcommands):
     cloud = subcommands.add_parser("cloud", help="operate the hosted Phase 3 coordinator")
-    cloud.add_argument("--profile", choices=("operator", "primary", "standby"))
+    cloud.add_argument("--profile", choices=("operator", "primary", "standby", "gateway"))
     actions = cloud.add_subparsers(dest="action", required=True)
-    for action in ("doctor", "create", "status", "events", "rescue", "worker"):
+    for action in ("doctor", "create", "status", "events", "rescue", "worker", "bridge"):
         parser = actions.add_parser(action)
         parser.set_defaults(handler=run)
         if action != "doctor":
             parser.add_argument("--job", required=True)
         if action == "worker":
             parser.add_argument("--role", choices=tuple(DEVICE_IDS), required=True)
+        if action == "bridge":
+            parser.add_argument("--port", required=True, help="Espressif native USB serial port")
 
 
 def run(args):
@@ -119,6 +121,11 @@ def run(args):
         client = CloudClient(settings.get("LIFERAFT_CLOUD_URL") or "", settings.get("LIFERAFT_CLOUD_TOKEN") or "")
         action = args.action
         job = None if action == "doctor" else TypeAdapter(Identifier).validate_python(args.job)
+        if action == "bridge":
+            from .bridge import run_bridge
+
+            run_bridge(client, job, args.port)
+            return 0
         if action == "worker":
             from .worker import run_worker
 

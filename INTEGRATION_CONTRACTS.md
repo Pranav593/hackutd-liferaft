@@ -219,6 +219,8 @@ Define and validate arguments and response objects before sending them to LLM. C
 
 See `HARDWARE_SAFETY_AND_WIRING.md` for tested safe wiring and staged bring-up. ESP32 emits strictly structured `protocol_version=1` JSON lines over USB serial at configured 115200 baud. Gateway sends confirmed status commands back (`DISPLAY_STATUS` only). The button means `injected cooling test`; DS18B20 reading means `ambient measured`. Pi CPU temp arrives from OS as `pi_cpu_temp_c`; don't conflate them. Relay has **no command in protocol**.
 
+The first button-only bridge accepts one `COOLING_FAILURE_TEST` frame from `esp32-s3-01` per explicit arming. With no ambient sensor attached, send `"ambient_temp_c":null` and `"ambient_valid":false`. The bridge forwards the frame as the `button` action under the `gateway` role. The coordinator validates it again, deduplicates by job, device, sequence and uptime, and links the received event to the existing rescue policy. OLED status and measured telemetry have separate integration steps.
+
 ## 11. Observable state change log
 
 Log each phase:
