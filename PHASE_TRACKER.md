@@ -1162,3 +1162,50 @@
 - Backend final result: 78 tests run in 133.340 s, OK (2 opt-in remote
   tests skipped). Same-host resume loss difference 0.0 and final weights
   equal; this does not establish new cross-device or hardware evidence.
+
+### 2026-11-08 UTC — Single-page bento UI revision — IMPLEMENTED
+
+- Latest user direction: complete the UI quickly; final content placement remains
+  provisional. Replaced long scrolling dashboard with five equal-area desktop
+  bento fields using the exact supplied red/honeydew/frost/steel/navy palette.
+- Reviewed the requested Portfolio-Website repository's actual global styles and
+  disclosure patterns. Added editorial type, simple copy and custom flat SVGs.
+  Removed radial gradients, grain, bloom and rim highlights from rendered views.
+- Each card opens an in-page detail dialog; existing proof, topology, timeline,
+  checkpoints, loss, advisory investigation, device/message states and copy/print
+  handoff remain accessible. Added plain-language explanations and a glossary.
+- Files: web/src/components/app/CockpitApp.tsx, components/dashboard/*,
+  lib/derive/dashboard.ts, styles/*, app/layout.tsx, topology presentation;
+  web/tests/dashboard.test.ts, cockpit.spec.ts, playwright.config.ts,
+  docs/DASHBOARD_UI.md. Preserved unrelated concurrent cleanup/package edits.
+- Actual commands: npm run typecheck, npm run test:contracts, npm test (18/18 PASS),
+  npm run build (PASS), git diff --check (PASS). Browser tests cover all five card
+  disclosures, sources/missing data, responsive fit/contrast, focus, copy/print,
+  filters/cursor/reverify and optional WebGL; final browser result appended below.
+- Initial browser pass caught the 1920 px layout being 10 px too tall, modal focus
+  wrapping and rendering during lost WebGL context; corrected all three. A filter
+  test was fixed to select the injected row rather than the always-visible current
+  selection, preserving the existing selected-event honesty behavior.
+- Real local CPU cooling-test demo ran in .liferaft/phase2-a4r4q6bx. No hardware,
+  real overheating, cloud writes or provider calls. Preview runs on loopback port
+  3105 to preserve existing listeners on 3000/3001. No deployment or push.
+
+### 2026-11-08 UTC — Bento UI final check
+
+- Production build and typecheck PASS; contract compile PASS; unit suites 18/18
+  PASS. Browser rerun: 18 overview/detail/responsive/honesty/focus/clipboard/print
+  tests PASS, with one context-loss rendering race found in optional WebGL.
+  Added an isContextLost guard before rendering; targeted WebGL restore/shader
+  regression now PASS (1/1). All 19 browser cases have passing results across
+  the full run plus that targeted correction. Latest JSON is the targeted run.
+- Desktop overview fits one screen at 1280/1440/1920 widths; all five colored
+  card areas are within 6% of one another. Axe serious/critical checks PASS at
+  1920/1440/1280/768/390/320 px and inside mobile details. No radial/gradient
+  backgrounds remain in active styles or the SVG map.
+- Actual fresh local replay: 22 events, 70 measured samples, checkpoint 32 ->
+  first resumed update 33, completion confirmed, RTO 4810.946 ms, RPO 0.
+  This is same-host two-process evidence, never a new distributed/hardware claim.
+- UI preview: http://127.0.0.1:3105. Final screenshots under .liferaft:
+  bento-desktop-final.png, bento-detail-final.png, bento-*.png and bento-handoff.pdf.
+- User requested stopping at a complete UI while content arrangement is decided.
+  No extra functionality or physical/provider/deployment work is required here.

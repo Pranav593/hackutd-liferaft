@@ -635,3 +635,10 @@
     }
   }
 }
+@layer layout {
+  @media (min-width: 1600px) {
+    .dashboard-grid {
+      height: calc(100svh - 300px);
+    }
+  }
+}

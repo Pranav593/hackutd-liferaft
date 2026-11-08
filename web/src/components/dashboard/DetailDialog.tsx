@@ -196,6 +196,36 @@ export function DetailDialog({
       ref={dialog}
       className="detail-dialog"
       aria-labelledby="detail-title"
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const elements = [
+          ...dialog.current!.querySelectorAll<HTMLElement>(
+            'button:not(:disabled),a[href],input:not(:disabled),select,textarea,summary,[tabindex="0"]',
+          ),
+        ].filter((element) => {
+          if (!element.getClientRects().length) return false;
+          let parent = element.parentElement;
+          while (parent && parent !== dialog.current) {
+            if (
+              parent instanceof HTMLDetailsElement &&
+              !parent.open &&
+              !parent.querySelector(":scope > summary")?.contains(element)
+            )
+              return false;
+            parent = parent.parentElement;
+          }
+          return true;
+        });
+        const first = elements[0],
+          last = elements.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
       onClose={() => {
         update({ inspectorOpen: false });
         onClose();

@@ -296,8 +296,12 @@ export class TopologyEngine {
     this.raf = 0;
     this.lastTime = 0;
   }
+  suspend() {
+    this.visible = false;
+    this.cancel();
+  }
   private resize() {
-    if (this.dead) return;
+    if (this.dead || this.renderer.getContext().isContextLost?.()) return;
     const { width, height } = this.canvas.getBoundingClientRect();
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / Math.max(1, height);
@@ -439,7 +443,7 @@ export class TopologyEngine {
   }
   private render = (now: number) => {
     this.raf = 0;
-    if (this.dead) return;
+    if (this.dead || this.renderer.getContext().isContextLost?.()) return;
     const start = performance.now(),
       dt = this.lastTime
         ? Math.min(0.05, (now - this.lastTime) / 1000)
