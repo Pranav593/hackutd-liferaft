@@ -735,3 +735,20 @@
   16 passed, 2 live checks skipped. `git diff --check` passed.
 - Faults are test-injected transport errors; no actual cloud outage induced.
   Next: stronger persistence fault coverage and isolated live test fixtures.
+
+### 2026-11-08 — Autonomous software update 6 — Phase 3 persistence fault gauntlet
+
+- Atlas artifact boundary now independently rejects corrupt bytes and cross-job
+  access before database writes. Added actual repository algorithm tests with
+  transactional doubles for state/artifact rollback, transient conflict retry,
+  bounded exhaustion and uncertain-commit refusal. These are NOT live Atlas tests.
+- Verified session/transaction methods against current official PyMongo docs:
+  https://www.mongodb.com/docs/languages/python/pymongo-driver/current/crud/transactions/
+- Installed existing pins with `.\.venv\Scripts\python.exe -m pip install
+  pymongo==4.15.5 dnspython==2.8.0` (passed; no lockfile changes).
+- `.\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_atlas*.py' -v`:
+  6/6 passed in 0.153 s; `git diff --check` passed. New repository tests skip if
+  optional cloud packages are absent. Files: atlas.py, test_atlas_artifacts.py,
+  test_atlas_transactions.py. Live rollback remains gated on isolated test Atlas.
+- No hardware, production database or credentials touched. Next: complete,
+  paginated event export without silently truncating recovery evidence.

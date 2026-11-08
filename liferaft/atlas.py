@@ -17,6 +17,8 @@ class AtlasArtifacts:
         self.upload = upload
 
     def verified_bytes(self, manifest):
+        if manifest.job_id != self.job_id:
+            raise IntegrityError("checkpoint belongs to another job")
         if self.upload is not None and self.upload[0] == manifest:
             return verify_data(self.upload[1], manifest)
         row = self.collection.find_one(
@@ -28,6 +30,9 @@ class AtlasArtifacts:
 
     def persist_upload(self):
         manifest, data = self.upload
+        if manifest.job_id != self.job_id:
+            raise IntegrityError("checkpoint belongs to another job")
+        verify_data(data, manifest)
         row = self.collection.find_one({"_id": manifest.path}, session=self.session)
         if row is None:
             self.collection.insert_one(
