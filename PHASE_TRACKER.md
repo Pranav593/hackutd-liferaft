@@ -1,6 +1,6 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
-**Current status:** Phases 0–2 are verified on one Apple Silicon Mac. This tracker records the commands, results, and gates for each phase.
+**Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
 
 ## Workflow rules
 
@@ -39,7 +39,8 @@
 - [x] Coordinator, Atlas adapter, outbound HTTPS client and Render Docker configuration implemented.
 - [x] Deploy the service and verify authenticated Atlas connectivity.
 - [x] Scoped device roles, transfer integrity, and stale-owner rejection pass offline API tests.
-- [ ] Add signed transfer URLs and complete the cloud doctor lease, transfer, and integrity checks.
+- [x] Implement expiring identity-bound binary transfer URLs and read-only per-job cloud doctor; offline positive/negative tests and real same-host signed-path training pass.
+- [ ] Verify the new signed transfers and job doctor on the deployed coordinator; no new hosted evidence claimed.
 - [ ] Verify immutable checkpoint writes and transaction rollback against live Atlas.
 - [ ] Atomic lease claim/yield/reject stale epoch and cloud health checks.
 - [x] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
@@ -831,3 +832,40 @@
   Compilation and `git diff --check` passed.
 - Errors/delays are injected fixtures; no actual cloud outage or hardware action.
   Next: consolidated operator guide, protocol contract and full regression suite.
+
+### 2026-11-08 — Autonomous software update 12 — Operator handoff and full verification
+
+- Updated README, integration contracts, test-matrix coverage, hosted setup notes,
+  tracker summary/checklist and docs/SOFTWARE_VERIFICATION.md. Documented exact
+  commands, rolling compatibility, safe failures and evidence/attestation limits.
+- Decisions: keep Atlas private behind the existing coordinator (no new service),
+  derive short-lived HMAC capabilities from scoped role credentials (no extra
+  secret provisioning), require both URL and bearer identity, preserve old worker
+  transfer compatibility, and reject unpaged server exports instead of silently
+  claiming completeness. Defer hardware/provider/deployment gates without asking
+  the team for resources in this session.
+- Full command actually run:
+  `.\.venv\Scripts\python.exe -m unittest discover -s tests -v 2>&1 | Tee-Object -FilePath .liferaft/autonomous-software-tests.log`
+  Result: 63 tests in 126.414 s, 61 passed, 2 opt-in hosted/isolated-Atlas tests
+  skipped, zero failures. Local raw output stays ignored. Full-run signed-path
+  metrics: checkpoint 25 -> measured 26..200, max loss difference 0.0, identical
+  final tensors, 32 journal events, 45,296-byte checkpoint, local RTO 218.038 ms,
+  graceful RPO 0. Independent-process test also resumed 120 -> 121 with max
+  loss difference 0.0. These are same-host tests, not new campus measurements.
+- `python -m compileall -q liferaft tests scripts` and `git diff --check` passed.
+  Initial `npm exec -- tsc ...` failed because this checkout lacked node_modules
+  and npm fetched the unrelated tsc placeholder. Corrected with `npm ci
+  --ignore-scripts` (one locked package, zero reported vulnerabilities) and
+  `node node_modules/typescript/bin/tsc --strict --noEmit web/src/lib/contracts.ts`
+  (exit 0). No package/lockfile changes. New guide invokes the pinned compiler.
+- Saved campus-button-05 export is absent from this checkout, so the new report
+  was not run on that historical physical drill here. Earlier live evidence stays
+  as recorded; synthetic/unit fixtures never replace it.
+- Remaining gates: new hosted signed/paged/doctor verification, real Atlas rollback
+  and claim concurrency, Pi heterogeneous compute, combined OLED/sensor status,
+  Photon and Next.js cockpit. No deployment, hardware/serial access, provider
+  message, live NVIDIA call or production fixture performed. No new human action
+  requested. Phase 3 remains IN_PROGRESS; no hardware phase falsely marked done.
+- Twelve major updates were independently committed and pushed. Next work should
+  use the documented hosted checks when a deployment/isolated Atlas is authorized
+  and available, while preserving the local adapter and recorded physical proof.

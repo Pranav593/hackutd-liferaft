@@ -162,6 +162,20 @@ resumed. Preserve failed-drill evidence and use a fresh job for a clean repeat.
 
 ## 6. Optional live cloud verification
 
+The latest software-only verification and remaining deployment gates are in
+[SOFTWARE_VERIFICATION.md](SOFTWARE_VERIFICATION.md). New workers negotiate signed
+binary transfers after the server advertises `signed-v1`; they keep legacy scoped
+transfer compatibility with older servers. Complete paginated event export needs
+the server revision advertising `paged-v1` and fails explicitly on older servers.
+Existing private role tokens suffice; no new account or signing secret is needed.
+
+After deploying the reviewed revision, operator `cloud doctor --job JOB` performs
+read-only job checks. Missing/stale standby, expired lease, bad/missing checkpoint,
+disabled drills and a finished job all prevent `ready_for_drill`. General `cloud
+doctor` still checks authentication/database connectivity. Neither proves a new
+distributed transfer; preserve the two-laptop worker logs and full event export
+for that gate. Do not put transfer URL query strings in access logs/screenshots.
+
 Run the hosted access checks on a laptop with its existing `.env.standby`. These probes use a fresh nonexistent job ID and expect the coordinator to reject an anonymous download and an authenticated worker impersonation.
 
 ```sh

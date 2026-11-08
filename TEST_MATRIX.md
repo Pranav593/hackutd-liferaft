@@ -115,3 +115,21 @@ Run at least **three** complete controlled rescue cycles after hardware integrat
 7. Repeat twice, recording raw redacted evidence and failure reasons.
 
 Do not quote synthetic benchmark measurements as actual results. Codex should generate an `evidence.json` report and an `experiments.md` summary with timestamps and test classifications, and include only measured values in UI.
+
+## 9. November 8 autonomous software regression coverage
+
+These are automated software assertions. Live/device gates above remain separate.
+
+| Area | Suite | Classification |
+|---|---|---|
+| CK02/03/05, signed checkpoint continuity | `test_signed_training.py` | Real same-host CPU training, in-process WSGI transport; final tensors/losses compared |
+| CK08/09, storage isolation and rollback | `test_atlas_artifacts.py`, `test_atlas_transactions.py` | Offline collection/transaction doubles with actual repository policy |
+| NET03/04/05/06, private transfer boundaries | `test_cloud.py`, `test_transfers.py` | Offline actual API/policy plus capability expiry/tampering tests |
+| NET07, bounded transient retries | `test_cloud_transport.py` | Injected HTTP/network failures; uncertain mutations never retried |
+| Complete Flight Recorder export | `test_event_export.py` | 515 synthetic events plus concurrent append, truncation/tampering rejection |
+| Evidence honesty and unknown RPO | `test_evidence.py` | Synthetic positive/negative proof fixtures; atomic report output |
+| Read-only job checks | `test_readiness.py`, `test_cloud.py` | Missing/corrupt checkpoint, stale standby/lease, role/drill checks; database unchanged |
+| Hosted authorization and Atlas rollback | `test_cloud_live.py` | Opt-in only; NOT_RUN in this software batch |
+
+Exact observed suite results and local numerical measurements are in the tracker.
+See [SOFTWARE_VERIFICATION.md](docs/SOFTWARE_VERIFICATION.md) to reproduce.

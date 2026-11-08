@@ -43,6 +43,47 @@ Use the hosted coordinator's `POST /v1/control` action endpoint. Worker credenti
 
 **Every API error** uses a machine-readable error code, request ID and safe message. Do not leak SQL stack traces, secrets, bucket object tokens or contact numbers. Use 401/403 appropriately for auth, 409 for stale epoch, 422 for bad schema, 429 for rate-limits; network timeouts retry with capped exponential backoff plus jitter. Distinguish committed vs uploading checkpoint.
 
+### Implemented Phase 3 transport revision
+
+Authenticated `doctor` with no job advertises `checkpoint_transfer: signed-v1`
+and `event_export: paged-v1`. `doctor` with a job is operator-only and checks
+readiness without watchdog/state mutation. Legacy base64 `commit`/`download`
+actions remain supported for existing clients.
+
+| Implemented action | Caller | Arguments | Result |
+|---|---|---|---|
+| `upload_url` | current primary/standby owner | `manifest` | relative `signed_url`, `expires_in_s: 20` |
+| `download_url` | ready standby | `checkpoint_id`, `epoch` | relative `signed_url`, `expires_in_s: 20` |
+| `events` | operator | optional `after`, `through`, `limit` (1–500) | `events`, `chain_valid`, `head_seq`, `head_hash`, `next_after`, `has_more` |
+| `doctor` with job | operator | empty object | lease/readiness/integrity checks and explicit blockers |
+
+Use signed URLs only on the coordinator's own origin at `/v1/checkpoint`.
+PUT carries exact raw checkpoint bytes; GET returns raw bytes. Both require the
+matching role bearer credential in addition to the URL. HMAC-SHA256 binds role,
+method, complete manifest, issued time and fixed expiry. Rotation invalidates
+outstanding capabilities. Each request rechecks current epoch/ownership or offered
+checkpoint/readiness; possession of a URL cannot bypass policy. PUT verifies
+size/hash and atomically persists immutable bytes and committed state. Repeating
+identical bytes under a valid lease is idempotent. A stale PUT returns 409.
+
+The client refuses foreign/absolute URLs and redirects before attaching auth.
+Do not log URL query strings, authorization headers or transfer offers. Cap
+checkpoint bytes at 10 MiB, non-transfer control envelopes at 16 KiB, exports at
+2 MiB/32 pages. JSON duplicate keys and nonfinite values are rejected. Workers
+validate finite lease plans against the 12-second TTL.
+
+Cloud retries use at most three attempts, exponential jitter and deadline checks
+while reading chunks. Retry network failures and 429/502/503/504 for safe reads,
+request-ID-deduplicated actions and immutable transfers. Never automatically retry
+`start`, `claim`, `yield`, `resumed`, `complete` or `create` after an uncertain
+response. The worker stops; inspect status/events before a new run.
+
+The first event page fixes a head sequence/hash. Subsequent pages supply that
+`through` head even if new events arrive. The exporter validates all hashes,
+contiguous sequences, unique IDs and exact job identity. A successful export adds
+`complete: true`. Hash integrity detects tampering; it does not independently
+attest physical hardware, checkpoint bytes or an external trust anchor.
+
 ## 4. Canonical schema examples
 
 ### Worker heartbeat

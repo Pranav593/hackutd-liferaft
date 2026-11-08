@@ -66,6 +66,28 @@ Success prints `LOCAL_RECOVERY_VERIFIED` with `owner: local-standby`, `epoch: 2`
 
 See the [Phase 3 Atlas and Render setup guide](docs/PHASE_3_ATLAS_SETUP.md) for the cloud deployment and recovery drill. Live verification status is in the phase tracker.
 
+## Verify readiness and save a recovery brief
+
+With the current coordinator revision deployed, the operator can check a job
+without changing its lease or running recovery policy:
+
+```sh
+.venv/bin/python -m liferaft cloud --profile operator doctor --job campus-button-05
+.venv/bin/python -m liferaft cloud --profile operator events --job campus-button-05 > .liferaft/campus-button-05.jsonl
+.venv/bin/python -m liferaft evidence --job campus-button-05 --output .liferaft/campus-button-05-evidence.json
+```
+
+Substitute your actual job ID. On Windows use `.\.venv\Scripts\python.exe`.
+The readiness result lists blocking reasons; a completed job correctly is not
+ready for another drill. The events command captures all pages to a fixed hash
+head and verifies them locally. `evidence` links checkpoint, ownership and measured
+first-step records, keeps crash RPO unknown, and refuses to overwrite an existing
+output. Saved legacy exports remain readable with `legacy_unanchored` completeness.
+The brief is deterministic; Nemotron interpretation uses the separate command below.
+
+See [software verification and remaining gates](docs/SOFTWARE_VERIFICATION.md)
+for test commands, signed-transfer behavior, rolling compatibility and evidence limits.
+
 ## Investigate a rescue with NVIDIA Nemotron
 
 Run the investigation from the dashboard station, Pranav's Mac. Ved's Windows laptop is the Raspberry Pi connection point. The investigator reads the job export, which identifies the workers that actually ran that job.
