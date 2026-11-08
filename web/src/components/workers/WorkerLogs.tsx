@@ -19,7 +19,7 @@ type DeviceLog = {
   age_s: number | null;
   rows: LogRow[];
 };
-type Feed = {
+export type Feed = {
   job: string | null;
   mode: "waiting" | "local" | "cloud" | "saved";
   notice: string;
@@ -93,13 +93,39 @@ export function WorkerLogs() {
   }, [paused, revision]);
 
   return (
+    <WorkerLogPanel
+      feed={feed}
+      error={error}
+      controls={{
+        paused,
+        toggle: () => setPaused(!paused),
+        refresh: () => {
+          setPaused(false);
+          setRevision(revision + 1);
+        },
+      }}
+    />
+  );
+}
+
+export function WorkerLogPanel({
+  feed,
+  error,
+  controls,
+}: {
+  feed: Feed | null;
+  error: string;
+  controls?: { paused: boolean; toggle: () => void; refresh: () => void };
+}) {
+  const paused = controls?.paused;
+  return (
     <section className="worker-logs" aria-labelledby="worker-log-title">
       <div className="worker-logs-heading">
         <div>
           <h2 id="worker-log-title">Training activity</h2>
           <p>
             {feed?.job
-              ? `Job ${feed.job} · selected automatically`
+              ? `Job ${feed.job} · ${controls ? "selected automatically" : "verified job"}`
               : "Finding the current training job automatically…"}
           </p>
         </div>
@@ -113,18 +139,19 @@ export function WorkerLogs() {
                   ? "SAVED RECORD"
                   : "NOT CONNECTED"}
           </span>
-          <button onClick={() => setPaused(!paused)}>
-            {paused ? "Resume updates" : "Pause updates"}
-          </button>
-          <button
-            aria-label="Refresh worker logs"
-            onClick={() => {
-              setPaused(false);
-              setRevision(revision + 1);
-            }}
-          >
-            ↻
-          </button>
+          {controls && (
+            <>
+              <button onClick={controls.toggle}>
+                {paused ? "Resume updates" : "Pause updates"}
+              </button>
+              <button
+                aria-label="Refresh worker logs"
+                onClick={controls.refresh}
+              >
+                ↻
+              </button>
+            </>
+          )}
         </div>
       </div>
       <p className="worker-log-notice">

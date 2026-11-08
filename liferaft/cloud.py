@@ -26,7 +26,8 @@ from .failover import LEASE_TTL_S, JobPlan, JobSpec
 RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 RETRY_SAFE_ACTIONS = frozenset({"doctor", "spec", "status", "events", "register", "candidates",
                                 "heartbeat", "heartbeat_edge", "ambient", "pi_telemetry", "edge_status", "commit", "rescue",
-                                "button", "upload_url", "download_url", "photon_context"})
+                                "button", "upload_url", "download_url", "photon_context",
+                                "demo_status", "demo_poll", "demo_report", "demo_button_ready"})
 
 
 class LeaseResponse(WireModel):
@@ -214,8 +215,13 @@ class CloudWorkerCoordinator:
 
     def heartbeat(self, request):
         action = "heartbeat_edge" if self.adaptive and isinstance(request, AdaptiveHeartbeat) else "heartbeat"
-        return decode_plan(self.client.call(action, request.job_id, **request.model_dump(
-            mode="json", exclude={"checkpoint_ms", "step_wall_ms"} if action == "heartbeat" else None)))
+        fields = request.model_dump(mode="json")
+        if action == "heartbeat":
+            for key in ("checkpoint_ms", "step_wall_ms", "training_loss"):
+                fields.pop(key, None)
+        elif fields.get("training_loss") is None:
+            fields.pop("training_loss", None)
+        return decode_plan(self.client.call(action, request.job_id, **fields))
 
     def register_standby(self, job_id, worker_id):
         self.client.call("register", job_id)
@@ -260,6 +266,45 @@ class CloudWorkerCoordinator:
             self.store.verified_bytes(manifest)
             return path
         return self.store.put(manifest.path, lambda stream: stream.write(data))
+
+
+def run_cloud_worker(client, job, role, *, capability=None):
+    from .worker import run_worker
+
+    capability = capability or client.call("doctor")
+    client._signed_transfers = capability.get("checkpoint_transfer") == "signed-v1"
+    authenticated_role = capability.get("role")
+    allowed_roles = {"primary", "pi_primary"} if role == "primary" else {"standby"}
+    if authenticated_role not in allowed_roles:
+        raise ValueError("cloud token does not match the worker role")
+
+    worker_id = DEVICE_IDS[authenticated_role]
+    advertised = capability.get("worker_id")
+    if advertised != worker_id and (advertised is not None or authenticated_role == "pi_primary"
+                                   or capability.get("edge_protocol") == "v1"):
+        raise ValueError("coordinator returned an invalid worker identity")
+    root = state_dir()
+    root.mkdir(exist_ok=True, parents=True, mode=0o700)
+    store = LocalArtifactStore(Path(tempfile.mkdtemp(prefix=f"cloud-{role}-", dir=root)))
+    coordinator = CloudWorkerCoordinator(client, store, adaptive=capability.get("edge_protocol") == "v1")
+    from .worker_logs import capture_session
+    with capture_session(job, worker_id):
+        run_worker(coordinator, store, job_id=job, worker_id=worker_id, role=role,
+                   step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint,
+                   adaptive=coordinator.adaptive, sample_loss=capability.get("live_demo") is True and job.startswith("pi-live-"))
+
+
+def demo_job_spec(job, primary):
+    from .workload import CONFIG_FINGERPRINT, MODEL_VERSION, make_dataset
+
+    return JobSpec(job_id=job, run_id=f"run-{uuid4().hex}", primary=primary, seed=1729,
+                   target=200, checkpoint_every=10, model_version=MODEL_VERSION,
+                   dataset_fingerprint=make_dataset(1729)[2], config_fingerprint=CONFIG_FINGERPRINT)
+
+
+def profile_client(profile):
+    settings = dotenv_values(f".env.{profile}", interpolate=False)
+    return CloudClient(settings.get("LIFERAFT_CLOUD_URL") or "", settings.get("LIFERAFT_CLOUD_TOKEN") or "")
 
 
 def install_commands(subcommands):
@@ -333,36 +378,9 @@ def run(args):
             run_bridge(client, job, args.port, continuous=args.monitor)
             return 0
         if action == "worker":
-            from .worker import run_worker
-
-            capability = client.call("doctor")
-            authenticated_role = capability.get("role")
-            allowed_roles = {"primary", "pi_primary"} if args.role == "primary" else {"standby"}
-            if authenticated_role not in allowed_roles:
-                raise ValueError("cloud token does not match the worker role")
-
-            worker_id = DEVICE_IDS[authenticated_role]
-            advertised = capability.get("worker_id")
-            if advertised != worker_id and (advertised is not None or authenticated_role == "pi_primary"
-                                           or capability.get("edge_protocol") == "v1"):
-                raise ValueError("coordinator returned an invalid worker identity")
-            root = state_dir()
-            root.mkdir(exist_ok=True, parents=True, mode=0o700)
-            store = LocalArtifactStore(Path(tempfile.mkdtemp(prefix=f"cloud-{args.role}-", dir=root)))
-            coordinator = CloudWorkerCoordinator(client, store, adaptive=capability.get("edge_protocol") == "v1")
-            from .worker_logs import capture_session
-            with capture_session(job, worker_id):
-                run_worker(coordinator, store, job_id=job, worker_id=worker_id, role=args.role,
-                           step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint, adaptive=coordinator.adaptive)
+            run_cloud_worker(client, job, args.role)
             return 0
-        fields = {}
-        if action == "create":
-            from .workload import CONFIG_FINGERPRINT, MODEL_VERSION, make_dataset
-
-            spec = JobSpec(job_id=job, run_id=f"run-{uuid4().hex}", primary=args.primary, seed=1729,
-                           target=200, checkpoint_every=10, model_version=MODEL_VERSION,
-                           dataset_fingerprint=make_dataset(1729)[2], config_fingerprint=CONFIG_FINGERPRINT)
-            fields = spec.model_dump(mode="json")
+        fields = demo_job_spec(job, args.primary).model_dump(mode="json") if action == "create" else {}
         if action == "rescue":
             fields = {"request_id": str(uuid4())}
         result = client.export_events(job) if action == "events" else client.call(action, job, **fields)

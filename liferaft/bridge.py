@@ -99,15 +99,19 @@ def monitor(client, job, connection, *, clock=time.monotonic):
     display("OFFLINE")
 
 
-def run_bridge(client, job, port, *, continuous=False):
+def require_button_port(port):
     try:
-        from serial import Serial, SerialException
         from serial.tools.list_ports import comports
     except ImportError:
         raise RuntimeError("install pyserial==3.5 in the bridge Python environment") from None
-
     if not any(item.device == port and item.vid == 0x303A for item in comports()):
         raise ValueError("choose the enumerated Espressif native USB port")
+
+
+def run_bridge(client, job, port, *, continuous=False, on_armed=None):
+    require_button_port(port)
+    from serial import Serial, SerialException
+
     doctor = client.call("doctor")
     if doctor["role"] != "gateway":
         raise ValueError("cloud token does not match the gateway role")
@@ -122,6 +126,8 @@ def run_bridge(client, job, port, *, continuous=False):
         connection.open()
         connection.reset_input_buffer()
         log("BUTTON_BRIDGE_ARMED", job_id=job, wait_seconds=ARM_SECONDS)
+        if on_armed is not None:
+            on_armed()
         if continuous:
             monitor(client, job, connection)
             return

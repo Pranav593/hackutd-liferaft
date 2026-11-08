@@ -99,6 +99,7 @@ export function CockpitApp() {
           <br />a safe place to land.
         </span>
         <div className="header-actions">
+          <a href="/live" className="header-evidence">Live demo ↗</a>
           <span className="saved-mode">
             <i />
             Saved replay

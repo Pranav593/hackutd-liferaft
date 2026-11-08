@@ -8,6 +8,8 @@ checkpoint-aware job on a standby, proves continuity, and briefs the on-call
 engineer. The coordinator ledger is infrastructure; the product is **predict,
 decide, evacuate, prove, brief**.
 
+[Live Raspberry Pi demo and previous-job verification](docs/LIVE_HARDWARE_DEMO.md)
+
 ## Run the MVP presentation
 
 ### Pi + Windows training logs

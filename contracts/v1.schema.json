@@ -143,6 +143,20 @@
       "system": {
         "$ref": "#/$defs/WorkerSystem"
       },
+      "training_loss": {
+        "anyOf": [
+          {
+            "maximum": 1e+20,
+            "minimum": 0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Training Loss"
+      },
       "worker_id": {
         "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
         "title": "Worker Id",

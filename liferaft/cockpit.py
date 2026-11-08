@@ -145,7 +145,7 @@ def investigation_view(path, job, events, incident):
                    "uncertainty": report.uncertainty, "outcome": report.verified_outcome})
 
 
-def build_view(job, *, export=None, local_run=None, investigation=None):
+def build_view(job, *, export=None, local_run=None, investigation=None, journal=None):
     if local_run is not None:
         saved = read_json(local_run / "evidence.json")
         if saved["mode"] != "local" or saved["status"]["job_id"] != job:
@@ -153,6 +153,9 @@ def build_view(job, *, export=None, local_run=None, investigation=None):
         entries = saved["events"]
         # Local demo saves the full report after checking the coordinator chain.
         metadata = {"events": entries, "chain_valid": True}
+        events = verify_journal(metadata, job)
+    elif journal is not None:
+        metadata = journal
         events = verify_journal(metadata, job)
     else:
         events, metadata = load_export(export, job)
@@ -165,7 +168,7 @@ def build_view(job, *, export=None, local_run=None, investigation=None):
         checkpoint["hash_prefix"] = checkpoint.pop("sha256")[:12]
     losses = local_losses(local_run, job, rows, brief) if local_run is not None else {}
     for row in rows:
-        if row["step"] is not None and row["loss"] is not None and row["kind"] == "FIRST_RESUMED_STEP_COMPLETED":
+        if row["step"] is not None and row["loss"] is not None and row["kind"] in {"FIRST_RESUMED_STEP_COMPLETED", "TRAINING_STEP_COMPLETED"}:
             key = (row["worker"], row["epoch"], row["step"])
             losses[key] = {**{key: row[key] for key in ("worker", "epoch", "step", "loss", "at")}, "origin": "journal"}
     trace = None

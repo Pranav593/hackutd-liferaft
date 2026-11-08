@@ -81,6 +81,7 @@ class WorkerHeartbeat(WireModel):
 class AdaptiveHeartbeat(WorkerHeartbeat):
     checkpoint_ms: float | None = Field(default=None, ge=0, le=30_000, strict=True)
     step_wall_ms: float | None = Field(default=None, gt=0, le=30_000, strict=True)
+    training_loss: float | None = Field(default=None, ge=0, le=1e20, strict=True)
 
 
 class PiTelemetry(WireModel):

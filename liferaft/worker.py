@@ -16,7 +16,7 @@ from .workload import TrainingSession
 
 def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job_id: str,
                worker_id: str, role: str, step_sleep: float, timeout: float,
-               poll_s: float = 0.25, fetch_checkpoint=None, adaptive=False) -> None:
+               poll_s: float = 0.25, fetch_checkpoint=None, adaptive=False, sample_loss=False) -> None:
     spec = coordinator.get_spec(job_id)
     deadline = time.monotonic() + timeout
     candidate = None
@@ -65,6 +65,7 @@ def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job
     checkpoint_interval = spec.checkpoint_every
     optimizer_ms = 0.0
     measured_steps = 0
+    loss = None
 
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="checkpoint") if adaptive else None
     pending = None
@@ -86,7 +87,13 @@ def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job
             remaining = min(deadline, expires) - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError("worker lease or run deadline expired during checkpoint")
-            record_commit(pending.result(timeout=remaining))
+            try:
+                result = pending.result(timeout=remaining)
+            except TimeoutError as error:
+                if pending.done() and pending.exception() is error:
+                    raise
+                raise TimeoutError("checkpoint upload did not finish before the worker lease or run deadline") from None
+            record_commit(result)
             pending = None
 
     def save_if_needed(*, block=False):
@@ -123,7 +130,7 @@ def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job
                     step_wall_ms = min(30_000, max(0.001, optimizer_ms / measured_steps + step_sleep * 1000))
                 heartbeat_type = AdaptiveHeartbeat if adaptive else WorkerHeartbeat
                 metrics = {"checkpoint_ms": min(30_000, checkpoint_ms) if checkpoint_ms is not None else None,
-                           "step_wall_ms": step_wall_ms} if adaptive else {}
+                           "step_wall_ms": step_wall_ms, "training_loss": loss if sample_loss and measured_steps else None} if adaptive else {}
                 plan = coordinator.heartbeat(heartbeat_type(
                     request_id=uuid4(), job_id=job_id, worker_id=worker_id, lease_epoch=epoch,
                     client_utc=utc_now(), step_completed=session.step, status="RUNNING",

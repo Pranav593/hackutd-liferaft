@@ -294,6 +294,10 @@ class LocalFailover(LocalCoordinator):
             system = ({"os": request.system.os, "arch": request.system.arch}
                       if isinstance(request, AdaptiveHeartbeat) else {})
             self._event(db, job, "WORKER_HEARTBEAT", step=request.step_completed, **system)
+            if (isinstance(request, AdaptiveHeartbeat) and request.training_loss is not None
+                    and request.step_completed > 0):
+                self._event(db, job, "TRAINING_STEP_COMPLETED", source="measured",
+                            step=request.step_completed, loss=request.training_loss)
             if job["state"] == "RESCUE_REQUESTED":
                 db.execute("UPDATE jobs SET state='PREEMPTING' WHERE job_id=?", (request.job_id,))
                 self._event(db, job, "PRIMARY_PAUSE_REQUESTED", step=request.step_completed)

@@ -1,5 +1,36 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
+## 2026-11-08 — One-button Pi hardware cockpit — implemented, live gate open
+
+- Added loopback `/live`, read-only lookup for earlier Pi jobs, an authenticated
+  single hosted launch slot, and outbound Pi, standby and ESP32 agents. The
+  bridge opens its port only after the coordinator verifies a checkpoint and
+  sees a fresh standby. Start is scoped to a fresh bounded Pi job and is
+  independent of provider success. Saved rehearsal stays separate.
+- Live rows use verified heartbeats, actual sampled optimizer losses, checkpoint
+  records, measured resume proof, explicitly injected USB events, and provider
+  receipts. Nemotron verifies the journal prefix used for investigation. Photon
+  can follow the active demo job using the existing signed webhook and outbox.
+- Changed demo dispatch, device runner, cockpit projection, worker logging,
+  optional adaptive heartbeat loss field and schema/TypeScript mirrors.
+  Setup, older-job verification and device-specific diagnostics are documented
+  in `docs/LIVE_HARDWARE_DEMO.md`.
+- `.venv/bin/python -m unittest discover -s tests -v` PASS: 97 tests run,
+  5 skipped. Focused `test_live_demo.py` rerun PASS after checking the
+  pre-training empty journal. Its same-host, in-process WSGI test uses actual CPU
+  training and signed artifact transfer, a test button frame and stubbed Pi
+  identity/temperature. The backup ran the next step at epoch 2, reported zero
+  completed steps lost and finished step 200. This is software evidence.
+- Targeted live TypeScript and contract checks PASS, four direct API boundary
+  checks PASS, and `git diff --check` PASS. Full browser verification was blocked
+  by the execution environment refusing a loopback listener and missing npm
+  dependencies. The npm install attempt could not reach the registry here.
+- Render's inspected deployment was `398b68d`. This revision needs deployment
+  with the live demo flag and three device agents. This environment could not
+  fetch the hosted `pi-mvp-03` journal. Pi-to-Windows proof, the physical press,
+  browser workflow and live providers still need an observed run. The old-job
+  lookup can be used before deploying the new coordinator.
+
 ## 2026-11-08 — Real live progress validation
 
 - Added an integration check that executes three actual PyTorch optimizer updates

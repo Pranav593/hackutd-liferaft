@@ -18,7 +18,7 @@ from .atlas import AtlasRepository
 from .config import redact
 from .contracts import AdaptiveHeartbeat, AmbientReport, ButtonEvent, PiTelemetry, CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
 from .failover import JobSpec, JobPlan
-from . import photon_queue
+from . import demo_control, photon_queue
 from .photon import MAX_WEBHOOK_BYTES, PhotonScope, valid_id
 from .pi import PI_PRIMARY
 from .transfers import issue_ticket, verify_ticket
@@ -82,7 +82,7 @@ def unique_keys(pairs):
     return result
 
 
-def application(repository, credentials, *, drills=False, photon=None):
+def application(repository, credentials, *, drills=False, photon=None, live_demo=False):
     if (not REQUIRED_ROLES <= set(credentials) <= REQUIRED_ROLES | {"gateway", "photon", "pi_primary"}
             or any(not TOKEN_PATTERN.fullmatch(token) for token in credentials.values())
             or len(set(credentials.values())) != len(credentials)):
@@ -97,7 +97,11 @@ def application(repository, credentials, *, drills=False, photon=None):
             repository.ping()
             return {"auth": True, "database": True, "role": role, "checkpoint_transfer": "signed-v1",
                     "event_export": "paged-v1", "edge_protocol": "v1",
-                    "worker_id": DEVICE_IDS.get(role)}
+                    "worker_id": DEVICE_IDS.get(role), **({"live_demo": True} if live_demo and drills else {})}
+        if action.startswith("demo_"):
+            if not live_demo or not drills:
+                raise APIError("404 Not Found", "LIVE_DEMO_DISABLED")
+            return demo_action(role, action, job, args)
         if job is None:
             raise APIError("422 Unprocessable Entity", "JOB_REQUIRED")
         if action == "doctor" and not args:
@@ -117,7 +121,7 @@ def application(repository, credentials, *, drills=False, photon=None):
 
         if action in {"photon_claim", "photon_result", "photon_context"}:
             allowed({"photon"})
-            if photon is None or job != photon.job:
+            if photon is None or job != photon_job():
                 raise APIError("403 Forbidden", "PHOTON_SCOPE_DENIED")
             if action == "photon_context":
                 context = PhotonContext.model_validate(args)
@@ -164,7 +168,7 @@ def application(repository, credentials, *, drills=False, photon=None):
             allowed({"operator"})
             spec = JobSpec.model_validate(args)
             configured_primaries = {DEVICE_IDS[identity] for identity in PRIMARY_ROLES if identity in credentials}
-            if (spec.job_id != job or spec.primary not in configured_primaries
+            if (spec.job_id != job or job == demo_control.SLOT or spec.primary not in configured_primaries
                     or spec.target > 200 or spec.checkpoint_every < 10):
                 raise ValueError("job does not match the hosted demo limits")
             return repository.execute(job, lambda policy: policy.create_job(spec), create=True)
@@ -256,6 +260,57 @@ def application(repository, credentials, *, drills=False, photon=None):
             return repository.execute(job, lambda policy: policy.complete(job, worker, epoch))
         raise APIError("422 Unprocessable Entity", "UNKNOWN_OR_INVALID_ACTION")
 
+    def demo_action(role, action, job, args):
+        if role == "operator" and action == "demo_status" and job is None and not args:
+            return demo_control.public_state(demo_control.slot(repository))
+        if role == "operator" and action == "demo_start" and job is not None:
+            spec = JobSpec.model_validate(args)
+            if (not set(demo_control.ROLES) <= set(credentials) or spec.job_id != job
+                    or not job.startswith("pi-live-") or spec.primary != PI_PRIMARY
+                    or spec.target != 200 or spec.checkpoint_every != 10):
+                raise ValueError("invalid live demo job")
+            current = demo_control.slot(repository)["run"]
+            replace_job = None
+            if current and current["phase"] == "assigned":
+                old_job = current["job"]
+                if repository.execute(old_job, lambda policy: policy.edge_status(old_job))["state"] in {"COMPLETED", "FAILED"}:
+                    replace_job = old_job
+            try:
+                demo_control.slot(repository, lambda state, now: demo_control.reserve(state, now, job, replace_job))
+            except ValueError:
+                raise APIError("409 Conflict", "DEMO_BUSY_OR_DEVICES_UNAVAILABLE") from None
+            try:
+                repository.execute(job, lambda policy: policy.create_job(spec), create=True)
+            except Exception:
+                demo_control.slot(repository, lambda state, _: demo_control.publish(state, job, "failed"))
+                raise
+            demo_control.slot(repository, lambda state, _: demo_control.publish(state, job, "assigned"))
+            return {"job": job}
+        if role in demo_control.ROLES:
+            if action == "demo_poll" and job is None and set(args) == {"instance", "readiness"}:
+                instance = str(TypeAdapter(UUID).validate_python(args["instance"]))
+                readiness = args["readiness"]
+                if readiness not in ("ready", "unavailable"):
+                    raise ValueError("invalid device readiness")
+                state = demo_control.slot(repository, lambda state, now: demo_control.poll(
+                    state, now, role, instance, readiness))
+                return {"job": demo_control.assignment(state, role, instance) if readiness == "ready" else None}
+            if action == "demo_report" and job and set(args) == {"instance", "stage", "reason"}:
+                instance = str(TypeAdapter(UUID).validate_python(args["instance"]))
+                stage, reason = args["stage"], args["reason"]
+                if not isinstance(stage, str) or stage not in demo_control.STAGES or reason not in (
+                        None, "worker_stopped", "bridge_stopped", "checkpoint_wait_timeout"):
+                    raise ValueError("invalid demo stage")
+                demo_control.slot(repository, lambda state, now: demo_control.report(
+                    state, now, role, instance, job, stage, reason))
+                return True
+            if action == "demo_button_ready" and role == "gateway" and job and not args:
+                run = demo_control.slot(repository)["run"]
+                if run is None or run["job"] != job or run["phase"] != "assigned":
+                    raise APIError("403 Forbidden", "DEMO_JOB_DENIED")
+                return repository.execute(job, lambda policy: policy.readiness(job)["ready_for_drill"])
+        raise APIError("403 Forbidden", "DEMO_ACTION_DENIED")
+
     def encode(item):
         if isinstance(item, WireModel):
             return item.model_dump(mode="json")
@@ -311,6 +366,12 @@ def application(repository, credentials, *, drills=False, photon=None):
 
         return repository.execute(manifest.job_id, download)
 
+    def photon_job():
+        if live_demo and photon.job == demo_control.SLOT:
+            run = demo_control.slot(repository)["run"]
+            return run["job"] if run and run["phase"] == "assigned" else None
+        return photon.job
+
     def photon_webhook(environ):
         if photon is None:
             raise APIError("404 Not Found", "UNKNOWN_ROUTE")
@@ -322,7 +383,8 @@ def application(repository, credentials, *, drills=False, photon=None):
             raise APIError("401 Unauthorized", "PHOTON_SIGNATURE_REQUIRED")
         event = photon.parse(json.loads(raw, object_pairs_hook=unique_keys))
         if event is not None:
-            if not repository.execute(photon.job, lambda policy: photon_queue.ingest(policy, photon.job, event)):
+            target = photon_job()
+            if target is not None and not repository.execute(target, lambda policy: photon_queue.ingest(policy, target, event)):
                 raise APIError("503 Service Unavailable", "PHOTON_RECEIPT_PENDING")
         return {"received": True}
 
@@ -396,4 +458,5 @@ def from_environment():
         photon = None
         LOGGER.warning("Photon integration disabled because its scoped configuration is invalid")
     return application(AtlasRepository(uri), credentials, photon=photon,
-                       drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1")
+                       drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1",
+                       live_demo=os.environ.get("LIFERAFT_ENABLE_LIVE_DEMO") == "1")

@@ -1,5 +1,10 @@
 # Cockpit contract and operation
 
+The separate loopback [live hardware cockpit](LIVE_HARDWARE_DEMO.md) may
+request a new bounded Pi job through the authenticated operator launch slot.
+It displays verified hosted records and has no recovery or hardware command.
+The saved replay routes remain read-only.
+
 ## Independent training activity feed
 
 Both dashboards include a read-only **Training activity** section separate from

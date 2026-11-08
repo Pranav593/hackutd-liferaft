@@ -81,6 +81,7 @@ export interface SensorEvent {
 export interface AdaptiveHeartbeat extends WorkerHeartbeat {
   checkpoint_ms?: number | null
   step_wall_ms?: number | null
+  training_loss?: number | null
 }
 
 export interface PiTelemetry {

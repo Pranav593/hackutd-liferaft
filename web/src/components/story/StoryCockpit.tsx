@@ -151,6 +151,7 @@ export function StoryCockpit() {
           <span className="story-tag">
             <i /> SAVED REPLAY
           </span>
+          <a href="/live">Live hardware demo ↗</a>
           <a href="/">Evidence cockpit ↗</a>
         </div>
       </header>
