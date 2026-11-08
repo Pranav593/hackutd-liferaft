@@ -60,11 +60,11 @@
 - [x] Native USB enumeration, chip/flash identity, private original-flash backup, and real board-only USB serial hello verified on Windows.
 - [x] External GPIO5 button emitted a real contract-valid injected USB frame; local monitor exited and released COM8. Gateway and standby cloud doctors passed.
 - [ ] Exact PCB revision and accessory pinouts checked before accessory wiring; chip revision and board-only hello are verified above.
-- [ ] Button with pull-up/debounce emits *injected* test incident.
+- [x] Wired button emits an *injected* test incident and triggers an uninterrupted cloud recovery (`campus-button-05`).
 - [ ] OLED verified I2C voltage/address displays cloud-reported state.
 - [ ] DS18B20 pinout/resistor inspected; valid ambient measurement + invalid handling.
-- [ ] Python USB bridge forwards validated events via outbound HTTPS.
-- [x] One-shot button bridge and scoped coordinator action pass offline tests; live USB/Render acceptance remains open.
+- [x] Python USB bridge forwards validated button events via outbound HTTPS, verified in `campus-button-05`.
+- [x] One-shot button bridge and scoped coordinator action pass offline tests and the physical USB/Render drill.
 - [ ] Relay disconnected; no fan/Pi power switching; no real overheating.
 - **Gate:** physical button causes real software rescue and OLED reflects confirmed state.
 
@@ -561,3 +561,9 @@
   physical drill and operator event-chain review remain open. Laptop A can
   confirm final status with its existing operator role. Pi/OLED/temperature/relay
   unchanged; profiles, backup binaries and runtime evidence remain untracked.
+
+### 2026-11-08 UTC — Uninterrupted physical-button drill passed
+
+- `campus-button-05` completed at step 200 with `laptop-standby` owning epoch 2. The operator and standby ran on separate laptops. The saved journal links the physical ESP32 event labeled `injected` to `RESCUE_REQUESTED` for the same incident.
+- The Mac committed checkpoint step 25 and yielded. The standby received the matching SHA-256 checkpoint and ran measured step 26. Detection to the first resumed step was 6.534 s, with zero steps lost at the handoff. `JOB_COMPLETED` confirms the standby finished step 200.
+- Independently recomputed and verified all 79 hashes in `.liferaft/campus-button-05.jsonl`. Phase 5's button-to-recovery milestone is complete. The OLED and ambient temperature sensor remain separate open items.
