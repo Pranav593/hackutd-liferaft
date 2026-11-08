@@ -8,6 +8,7 @@ export type Series = {
   dashed?: boolean;
   width?: number;
   faint?: boolean;
+  area?: boolean;
 };
 
 export function LineChart({
@@ -76,12 +77,22 @@ export function LineChart({
       ))}
       {vlines.map((v) => (
         <g key={v.label}>
-          <line x1={sx(v.x)} x2={sx(v.x)} y1={pad.t} y2={height - pad.b} stroke={v.color} strokeWidth={1.5} />
+          <line x1={sx(v.x)} x2={sx(v.x)} y1={pad.t} y2={height - pad.b} stroke={v.color} strokeWidth={1} />
           <text x={sx(v.x) + 4} y={pad.t + 10} className="tick" fill={v.color}>
             {v.label}
           </text>
         </g>
       ))}
+      {series
+        .filter((s) => s.area && s.points.length > 1)
+        .map((s) => (
+          <path
+            key={`${s.label}-area`}
+            d={`${path(s.points)} L${sx(s.points[s.points.length - 1].x).toFixed(1)},${height - pad.b} L${sx(s.points[0].x).toFixed(1)},${height - pad.b} Z`}
+            fill={s.color}
+            opacity={0.08}
+          />
+        ))}
       {series.filter((s) => s.points.length > 0).map((s) =>
         s.points.length > 1 ? (
           <path
@@ -89,7 +100,7 @@ export function LineChart({
             d={path(s.points)}
             fill="none"
             stroke={s.color}
-            strokeWidth={s.width ?? 2.2}
+            strokeWidth={s.width ?? 1.8}
             strokeDasharray={s.dashed ? "4 4" : undefined}
             opacity={s.faint ? 0.55 : 1}
             strokeLinejoin="round"

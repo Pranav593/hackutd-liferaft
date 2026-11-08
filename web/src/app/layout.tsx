@@ -18,9 +18,11 @@ const mono = localFont({
   display: "swap",
 });
 const serif = localFont({
-  src: "../fonts/instrument-serif.woff2",
+  src: [
+    { path: "../fonts/instrument-serif-regular.woff2", style: "normal", weight: "400" },
+    { path: "../fonts/instrument-serif.woff2", style: "italic", weight: "400" },
+  ],
   variable: "--font-instrument",
-  style: "italic",
   display: "swap",
 });
 export const viewport: Viewport = { themeColor: "#F1FAEE" };
