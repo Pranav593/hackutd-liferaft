@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#060b16">
+  <meta name="description" content="LIFERAFT — compute continuity for AI infrastructure. Detect risk, save a verified checkpoint, hand off ownership, and prove training resumed.">
+  <title>LIFERAFT — Training survived.</title>
+  <link rel="icon" href="assets/patch.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="header wrap">
+  <a class="brand" href="#" aria-label="LIFERAFT home"><img src="assets/patch.svg" alt="" width="38" height="38">LIFERAFT<span class="brand-slash">/</span><span class="brand-caption">COMPUTE CONTINUITY</span></a>
+  <nav aria-label="Main navigation"><a href="#works">The system</a><a href="#cockpit">Mission control</a><a class="nav-contact" href="#crew">Meet the crew <span aria-hidden="true">↗</span></a></nav>
+</header>
+<main id="main">
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div class="hero-copy"><p class="eyebrow"><span class="signal"></span> KEEP THE WORK MOVING</p>
+      <h1 id="hero-title">Training<br><em>survived.</em></h1>
+      <p class="hero-sub">Compute continuity for AI infrastructure.</p>
+      <p class="hero-detail">When a machine is at risk, the work needs a way out.<br>Save it. Hand it off. Prove it kept going.</p>
+      <div class="actions"><a class="button primary" href="#flight">Watch the rescue <span aria-hidden="true">↗</span></a><a class="button secondary pilot" href="mailto:?subject=LIFERAFT%20pilot%20request&amp;body=Hello%20LifeRaft%20team%2C%0A%0AI%27d%20like%20to%20discuss%20a%20pilot.%0A">Request a pilot <span aria-hidden="true">↗</span></a></div>
+      <p class="pilot-note">Pilot contact is being set. The email draft opens without a recipient.</p>
+    </div>
+    <div class="hero-aside" aria-hidden="true"><span>MISSION 001</span><div class="orbit"><img src="assets/patch.svg" alt="" width="200" height="200"></div><span>CONTINUITY IS THE MISSION.</span></div>
+  </section>
+  <section id="flight" class="flight wrap" aria-label="Recorded cockpit rescue">
+    <div class="flight-bar"><span><span class="signal"></span> MISSION CONTROL / RECORDED REPLAY</span><span>10 SECOND LOOP <span aria-hidden="true">↺</span></span></div>
+    <div class="film"><video id="rescue-video" autoplay muted loop playsinline preload="metadata" poster="assets/cockpit.png" aria-label="Ten-second recording of mission control replaying the saved local-job cooling drill"><source src="assets/rescue.webm" type="video/webm">Your browser cannot play this recording. The poster shows mission control.</video><button id="video-toggle" class="video-toggle" aria-label="Pause recorded replay">Pause loop Ⅱ</button></div>
+    <div class="flight-caption"><p>Mission control runs on-site.<br><strong>The public page shows the flight.</strong></p><p>Saved local-job evidence · injected cooling drill<br>Recorded playback, never a live console.</p></div>
+  </section>
+  <section id="nightmare" class="section wrap split" aria-labelledby="nightmare-title">
+    <div><p class="eyebrow section-no">01 / A SCENARIO</p><h2 id="nightmare-title">The <em>nightmare</em></h2></div>
+    <div class="story"><p class="clock">03:07 <span>A.M.</span></p><p>Maya’s phone lights up. Rack 7. Thermal alarm.<br>Eleven days of training are on that machine.<br>The handoff is a Slack thread and a prayer.<br>What survived? Who owns it now? Where’s the proof?</p><small>Maya is a fictional on-call operator. This is a scenario, not a customer story.</small></div>
+  </section>
+  <section id="works" class="section wrap" aria-labelledby="works-title">
+    <div class="section-heading"><div><p class="eyebrow section-no">02 / THE RESCUE SEQUENCE</p><h2 id="works-title">How it <em>works</em></h2></div><p>One pull cord.<br>Four beats to continuity.</p></div>
+    <div class="architecture" aria-label="ESP32 signals an injected drill through the USB gateway to the coordinator; workers contact the coordinator over outbound HTTPS and standby resumes a verified checkpoint.">
+      <div class="arch-node"><span class="node-icon amber">◎</span><strong>ESP32</strong><small>The pull cord</small></div><div class="path amber-path"><span>USB → gateway → HTTPS</span><i></i></div><div class="arch-node"><span class="node-icon">◈</span><strong>Coordinator</strong><small>Deterministic authority</small></div><div class="path"><span>Outbound HTTPS</span><i></i></div><div class="arch-node"><span class="node-icon">▣</span><strong>Standby</strong><small>The work continues</small></div>
+    </div>
+    <ol class="beats"><li><span>01 / DETECT</span><h3>Catch the signal.</h3><p>A physical button injects the drill. Measured temperatures keep their own provenance.</p></li><li><span>02 / SAVE</span><h3>Keep the state.</h3><p>Model, optimizer, step and RNG state. Immutable bytes, verified by SHA-256.</p></li><li><span>03 / HAND OFF</span><h3>Move ownership.</h3><p>A finite lease and a new fencing epoch give the standby permission to continue.</p></li><li><span>04 / PROVE</span><h3>See the next step.</h3><p>A real optimizer update on the new owner is the evidence of recovery.</p></li></ol>
+    <p class="footnote">Checkpoint-aware training only. The pull cord triggers a test incident; no real overheating is induced.</p>
+  </section>
+  <section id="cockpit" class="section wrap" aria-labelledby="cockpit-title">
+    <div class="section-heading"><div><p class="eyebrow section-no">03 / MISSION CONTROL</p><h2 id="cockpit-title">The <em>cockpit</em></h2></div><p>The story, the state,<br>and the receipts.</p></div>
+    <figure class="wide-shot"><a href="assets/topology.png" target="_blank" rel="noopener" aria-label="Open full topology screenshot"><img src="assets/topology.png" alt="Recorded cockpit topology showing workers and the coordinator" loading="lazy" width="1340" height="850"></a><figcaption><span>01 / THE TOPOLOGY</span>Follow the worker and the ownership handoff.</figcaption></figure>
+    <div class="screenshot-pair"><figure><a href="assets/proof.png" target="_blank" rel="noopener" aria-label="Open full recovery proof screenshot"><img src="assets/proof.png" alt="Recovery proof from saved local-job evidence" loading="lazy" width="1340" height="850"></a><figcaption><span>02 / RECOVERY PROOF</span>A verified checkpoint. A measured next step.</figcaption></figure><figure><a href="assets/brief.png" target="_blank" rel="noopener" aria-label="Open full Handoff Brief screenshot"><img src="assets/brief.png" alt="The Handoff Brief and advisory investigation from the recorded cockpit" loading="lazy" width="1340" height="850"></a><figcaption><span>03 / THE HANDOFF BRIEF</span>The shift note the next operator needs.</figcaption></figure></div>
+    <p class="footnote">Screenshots of saved evidence, captured locally. The local-job recording demonstrates the local adapter; it is not evidence of a new cross-device drill or live provider call.</p>
+  </section>
+  <section id="trust" class="section wrap split" aria-labelledby="trust-title">
+    <div><p class="eyebrow section-no">04 / BUILT AROUND EVIDENCE</p><h2 id="trust-title">Why <em>trust</em> it</h2><p class="trust-line">The AI explains.<br><span>It never decides.</span></p></div>
+    <div class="trust-list"><article><span class="trust-symbol" aria-hidden="true">⊣</span><div><h3>Fenced ownership</h3><p>Leases expire. Epochs increase. A stale worker cannot commit work after ownership moves.</p></div></article><article><span class="trust-symbol" aria-hidden="true">≋</span><div><h3>A tamper-evident Flight Recorder</h3><p>Hash-linked events make edits detectable. Anchored exports verify their head; legacy exports stay labelled unanchored.</p></div></article><article><span class="trust-symbol" aria-hidden="true">◇</span><div><h3>Read-only Nemotron</h3><p>Typed tools gather evidence and explain the incident. The deterministic coordinator owns recovery decisions.</p></div></article></div>
+  </section>
+  <section id="roadmap" class="section wrap" aria-labelledby="roadmap-title"><div class="section-heading"><div><p class="eyebrow section-no">05 / NEXT — PLANNED</p><h2 id="roadmap-title">The <em>roadmap</em></h2></div><p>Where we go from here.<br>Planned, not shipping claims.</p></div><ol class="roadmap"><li><span>01</span><h3>Fleet Lifeboat Score</h3><p>A clearer view of recovery readiness.</p></li><li><span>02</span><h3>Multi-rack standby pools</h3><p>More places for protected work to land.</p></li><li><span>03</span><h3>Edge nodes</h3><p>Continuity beyond the rack.</p></li><li><span>04</span><h3>On-call channels</h3><p>Incident context where operators work.</p></li></ol></section>
+  <section id="crew" class="section wrap crew" aria-labelledby="crew-title"><div class="crew-patch"><img src="assets/patch.svg" alt="LIFERAFT mission patch: a continuity path inside a life ring" width="220" height="220"><p>MISSION 001 / KEEP IT RUNNING</p></div><div><p class="eyebrow section-no">06 / LIFE RAFT, REAL PEOPLE</p><h2 id="crew-title">The <em>crew</em></h2><p class="crew-name">LifeRaft</p><p class="crew-copy">Building a way for AI work to keep going.<br>Meet the project. Follow the mission.</p><div class="crew-links"><a href="https://github.com/Pranav593/hackutd-liferaft" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a><a href="https://hackutd-zeroday.devpost.com/" target="_blank" rel="noopener">HackUTD event on Devpost <span aria-hidden="true">↗</span></a></div></div></section>
+  <section class="closing wrap"><p class="eyebrow">THE WORK GETS ANOTHER CHANCE.</p><p>Training <em>survived.</em></p><a class="button primary" href="#flight">Watch the rescue <span aria-hidden="true">↗</span></a></section>
+</main>
+<footer class="wrap footer"><a class="brand" href="#">LIFERAFT</a><span>COMPUTE CONTINUITY FOR AI INFRASTRUCTURE.</span><span class="mission-clock">SCENARIO CLOCK <time>03:07:00</time> / FICTIONAL</span></footer>
+</body></html>

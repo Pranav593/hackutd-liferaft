@@ -1,21 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="empty-state">{children}</p>;
-}
-export function Skeleton() {
-  return (
-    <div
-      className="skeleton"
-      role="status"
-      aria-label="Checking saved evidence"
-    >
-      <span />
-      <span />
-      <span />
-    </div>
-  );
-}
+import { useState } from "react";
 export function Copy({
   text,
   label = "Copy",

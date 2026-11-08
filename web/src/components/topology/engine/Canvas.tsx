@@ -51,6 +51,7 @@ export default function Canvas({
     function lost(e: Event) {
       e.preventDefault();
       if (dead) return;
+      engine.current?.suspend();
       onStatus("lost");
       c.dataset.contextLosses = String(
         Number(c.dataset.contextLosses ?? "0") + 1,

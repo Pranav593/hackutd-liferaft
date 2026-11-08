@@ -1,5 +1,66 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
+## 2026-11-08 — Launch kit, step 2: website — local delivery
+
+- Scope: user-requested launch page first, followed by slides. Existing Phases
+  0/1 are already DONE; no training or hardware changes for this launch task.
+- Architecture: buildless static `launch/dist` beside the local-only cockpit;
+  build-time screenshots/recording only, no public API client or live embed.
+- Files: `launch/dist/{index.html,style.css,app.js,assets/*}`, `launch/README.md`,
+  `scripts/{capture-launch,encode-launch,check-launch}.cjs`. Existing dirty
+  cockpit changes and frozen API/contracts were preserved.
+- Commands actually run: `node scripts/capture-launch.cjs` PASS (4 screenshots,
+  100 frames); `node scripts/encode-launch.cjs` PASS (10 s, 1440×1000 VP8 WebM,
+  ~331 KiB); `node scripts/check-launch.cjs` PASS (4 viewports: 1440/768/390/320,
+  no horizontal overflow, no serious/critical axe violations, reduced motion
+  pauses video, keyboard skip works, no private API requests or iframes).
+- Preview command: `.venv/Scripts/python.exe -m http.server 4173 --bind
+  127.0.0.1 --directory launch/dist`. Served locally; browser preview opened.
+- Current fixture is 20 events, checkpoint 30 → step 31; media does not use
+  stale 32 → 33 numbers from earlier docs. Visible disclosures retain local
+  evidence, injected drill and replay boundaries; trust copy explains anchoring.
+- User supplied GitHub and Devpost event URLs plus crew name LifeRaft. Email
+  remains unknown: mailto draft has no invented recipient and says so visibly.
+- User explicitly requested local-only publication. No deployment performed;
+  no public URL exists. Local preview cannot serve a phone-scanned QR.
+- Cannot test physical drill, provider delivery, cross-device identity, or new
+  checkpoint byte verification from this static-media task. No such claims.
+- Next: nine-slide navy/teal/amber deck, timed speaker notes, local-preview QR.
+
+## 2026-11-08 — Launch kit, step 1: presentation — delivered
+
+- Completed after step 2 per user order. Nine slides with navy/black backgrounds,
+  teal continuity, amber risk, scenario disclosure, actual ESP32 photo, original
+  patch, NEXT roadmap, and the requested closing line. Speaker notes target
+  120 seconds plus the demo and explain the pull cord/operator/mission control
+  ritual. Actual rehearsal time and live hardware demo were NOT_RUN.
+- Files: `launch/presentation/{build.mjs,README.md,liferaft-launch.pptx}`.
+- Authoring command: bundled Node `launch/presentation/build.mjs`, with
+  `LIFERAFT_NODE_MODULES`, `LIFERAFT_PRESENTATIONS_SKILL`, and
+  `LIFERAFT_RUNTIME_PYTHON` set to workspace dependency-loader paths.
+- First finalizer attempt failed because its import subprocess needed
+  `RUNTIME_NODE_MODULES`; corrected the wrapper. Second attempt returned a
+  complete PASS receipt: 9 slides, 0 package/geometry findings, approved
+  Arial/Georgia fonts, successful first-party re-import; output 600299 bytes,
+  SHA-256 `cfec50297691ca4ee38aaa7f244e5bb396c18550f3fa0f49a83bbe62f4bd6362`.
+  That wrapper still exited 1 after producing the PASS receipt; source now
+  normalizes exitCode only after those successful validation fields. The
+  final artifact itself passed all checks; no failed check was bypassed.
+- Inspected all 9 original PNGs individually. Native Google Slides import
+  succeeded, then readback confirmed 9 slides, 9 notes pages, editable text,
+  and all 3 expected image assets. Inspected all 9 Google-rendered thumbnails
+  individually; text/image layout preserved. No PowerPoint UI check claimed.
+- Native deliverable: https://docs.google.com/presentation/d/1mrTBEsA5OmEym0pYkag8l_cDQqtdVtel6jP3yr9eTG0/edit
+  moved into the connected user's existing ChatGPT folder.
+- User requested local-only website. QR therefore visibly says LOCAL PREVIEW
+  and points to 127.0.0.1:4173. It cannot work on a phone; replace it only after
+  an approved deployment provides a verified public URL. Pilot email remains
+  missing; no contact address invented. No provider/hardware actions performed.
+- `node scripts/check-launch.cjs` final run PASS: 4 viewports, zero axe
+  violations, 10 s video decoded, reduced motion and keyboard checks pass,
+  screenshots loaded and inspected. `git diff --check` PASS (line-ending notices
+  only). Remaining action: supply pilot email; publish only if later approved.
+
 **Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. The Pi worker, edge monitor, adaptive scheduling, extended Nemotron tooling and Photon queue are implemented in software. The Next.js cockpit can replay verified saved journals locally. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
 
 ## Workflow rules
@@ -1211,3 +1272,73 @@
   typecheck, production build and Playwright were blocked by missing dependencies.
   An isolated offline `npm ci` found an incomplete cache, and registry DNS failed
   during an isolated online install attempt. No dashboard test pass is claimed.
+
+### 2026-11-08 UTC — Single-page bento UI revision — IMPLEMENTED
+
+- Latest user direction: complete the UI quickly; final content placement remains
+  provisional. Replaced long scrolling dashboard with five equal-area desktop
+  bento fields using the exact supplied red/honeydew/frost/steel/navy palette.
+- Reviewed the requested Portfolio-Website repository's actual global styles and
+  disclosure patterns. Added editorial type, simple copy and custom flat SVGs.
+  Removed radial gradients, grain, bloom and rim highlights from rendered views.
+- Each card opens an in-page detail dialog; existing proof, topology, timeline,
+  checkpoints, loss, advisory investigation, device/message states and copy/print
+  handoff remain accessible. Added plain-language explanations and a glossary.
+- Files: web/src/components/app/CockpitApp.tsx, components/dashboard/*,
+  lib/derive/dashboard.ts, styles/*, app/layout.tsx, topology presentation;
+  web/tests/dashboard.test.ts, cockpit.spec.ts, playwright.config.ts,
+  docs/DASHBOARD_UI.md. Preserved unrelated concurrent cleanup/package edits.
+- Actual commands: npm run typecheck, npm run test:contracts, npm test (18/18 PASS),
+  npm run build (PASS), git diff --check (PASS). Browser tests cover all five card
+  disclosures, sources/missing data, responsive fit/contrast, focus, copy/print,
+  filters/cursor/reverify and optional WebGL; final browser result appended below.
+- Initial browser pass caught the 1920 px layout being 10 px too tall, modal focus
+  wrapping and rendering during lost WebGL context; corrected all three. A filter
+  test was fixed to select the injected row rather than the always-visible current
+  selection, preserving the existing selected-event honesty behavior.
+- Real local CPU cooling-test demo ran in .liferaft/phase2-a4r4q6bx. No hardware,
+  real overheating, cloud writes or provider calls. Preview runs on loopback port
+  3105 to preserve existing listeners on 3000/3001. No deployment or push.
+
+### 2026-11-08 UTC — Bento UI final check
+
+- Production build and typecheck PASS; contract compile PASS; unit suites 18/18
+  PASS. Browser rerun: 18 overview/detail/responsive/honesty/focus/clipboard/print
+  tests PASS, with one context-loss rendering race found in optional WebGL.
+  Added an isContextLost guard before rendering; targeted WebGL restore/shader
+  regression now PASS (1/1). All 19 browser cases have passing results across
+  the full run plus that targeted correction. Latest JSON is the targeted run.
+- Desktop overview fits one screen at 1280/1440/1920 widths; all five colored
+  card areas are within 6% of one another. Axe serious/critical checks PASS at
+  1920/1440/1280/768/390/320 px and inside mobile details. No radial/gradient
+  backgrounds remain in active styles or the SVG map.
+- Actual fresh local replay: 22 events, 70 measured samples, checkpoint 32 ->
+  first resumed update 33, completion confirmed, RTO 4810.946 ms, RPO 0.
+  This is same-host two-process evidence, never a new distributed/hardware claim.
+- UI preview: http://127.0.0.1:3105. Final screenshots under .liferaft:
+  bento-desktop-final.png, bento-detail-final.png, bento-*.png and bento-handoff.pdf.
+- User requested stopping at a complete UI while content arrangement is decided.
+  No extra functionality or physical/provider/deployment work is required here.
+
+### 2026-11-08 — Additional unused UI cleanup
+
+- Traced relative imports from Next.js entry points and checked repository
+  references before removing three components unreachable from the dashboard:
+  `components/recorder/Inspector.tsx`, `components/rescue/RescueHeadline.tsx`,
+  and `components/scrubber/ReplayScrubber.tsx` under `web/src/`.
+  Dashboard detail dialogs and its replay transport provide the active views.
+- Removed unused `Empty`/`Skeleton` primitives and the unused `getState`
+  import/export. Retained the narrative derivation helper and its regression
+  tests. No backend, hardware, safety, recovery or provenance behavior changed.
+- Commands actually run: `npm run typecheck` PASS;
+  `npm run test:contracts` PASS; `npm test` PASS (18 tests in 3 files);
+  `npm run build` PASS (production compilation and static generation).
+- Additional diagnostic: `npm exec -- tsc --noEmit -p web/tsconfig.json
+  --noUnusedLocals --noUnusedParameters` initially identified unused imports
+  in removed/cleaned components and `configureBloom` in the independently
+  edited topology engine. Left the topology work untouched.
+- Reviewed remaining changed React components: clipboard state and hook order
+  retained, no new effects/listeners or dependencies, active dialogs preserved.
+- Browser, physical hardware and remote provider checks were not run for this
+  removal-only UI cleanup. No human action required. Next action: browser QA
+  alongside completion of the ongoing dashboard/topology work.

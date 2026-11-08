@@ -69,7 +69,11 @@ test("cursor, filters, raw evidence, deep links and re-verification remain linke
     .getByLabel("Filter source", { exact: true })
     .selectOption("injected");
   await expect(page.locator(".event-list")).toContainText("Cooling drill");
-  await page.locator(".event-row").first().click();
+  await page
+    .locator(".event-row")
+    .filter({ hasText: "Cooling drill" })
+    .first()
+    .click();
   await expect(page.locator(".selected-evidence")).toContainText("injected");
   await page
     .getByText("Open the technical record (JSON)", { exact: true })
