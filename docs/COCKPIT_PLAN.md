@@ -1,5 +1,50 @@
 # Cockpit contract and operation
 
+## Independent training activity feed
+
+Both dashboards include a read-only **Training activity** section separate from
+the replay cursor. `/api/worker-logs` accepts only loopback requests and no
+browser-supplied paths, commands, credentials or job IDs. Its backend discovers
+the job from local worker processes/session mirrors or a verified saved export.
+Pi and Windows panes keep their actual configured worker IDs; local rehearsal
+IDs are never renamed to imply physical Pi evidence. Missing OS stays unknown.
+
+The operator's ignored backend profile permits existing authenticated event
+exports. Verify the full chain, then expose only allowlisted event kinds and
+numeric metrics, not arbitrary stdout or evidence. Poll serially with bounded
+subprocess/network deadlines, cancel on unmount and pause while the page is
+hidden. Keep saved, local, cloud, stale, ended, paused and error states explicit.
+Local worker mirrors are supplemental diagnostics, never recovery proof. They
+are size capped and a mirror failure cannot stop the training worker.
+
+## Additive MVP story route (2026-11-08)
+
+The latest MVP request adds `/story` beside the existing five-card `/` view.
+Only this presentation route uses the requested dark gradient/glass visual
+system and a Three.js worker constellation. The five-card view below keeps
+its established palette and behavior. `npm run demo` prepares genuine local
+evidence and starts the presentation on loopback port 3120.
+
+Story controls are read-only saved-drill selection and explicit playback.
+The 90-second story may scroll to evidence panels after the operator presses
+Run. A persistent disclosure identifies same-host workers, injected faults,
+mock messaging and deterministic planning. Human reply buttons are interaction
+previews and never mutate the coordinator. The failure estimate shows linear
+fit R² rather than claiming calibrated confidence. Real ghost curves and
+final-weight proof appear only at their recorded comparison event.
+All existing evidence/security/safety requirements below still apply.
+
+### Simplified story presentation
+
+The main view prioritizes the worker handoff, early-warning estimate and ghost
+comparison. Keep the 3D transfer and real continuity proof prominent. Agent
+tools, simulated on-call messaging and illustrative costs are grouped in the
+closed-by-default **Under the hood** disclosure. The replay slider stays visible;
+hash-chain nodes and event JSON open under **Inspect the flight recorder**.
+Playback focuses the main panels without opening technical disclosures. Preserve
+all provenance labels and access to the original evidence cockpit. Use a plain
+dark background, flat panels and concise copy.
+
 Authoritative UI guidance, consolidated on 2026-11-08. The current five-card
 dashboard supersedes the retired long-page/glass layout and its implementation
 slices. Product, recovery, security and hardware requirements remain in the

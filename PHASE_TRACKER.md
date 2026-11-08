@@ -1,5 +1,174 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
+## 2026-11-08 — Real live progress validation
+
+- Added an integration check that executes three actual PyTorch optimizer updates
+  inside automatic worker capture and reads the dashboard feed after each one.
+  Each successive read must show the exact new step and measured loss, then
+  finished after session exit. Synthetic/injected training records are rejected.
+- Failed sessions now display an explicit worker error, rather than generic
+  session completion. Observed `pi-mvp-01` Windows session failure; no successful
+  optimizer steps or Pi activity claimed for that session.
+- Remote Pi visibility still requires the missing operator credential in the
+  prepared ignored `.env.operator`; the dashboard reads it each refresh.
+
+## 2026-11-08 — Pi / Windows training activity — implemented; remote read gate open
+
+- Added separate **Raspberry Pi** and **Windows computer** log panes to `/story`
+  and `/`. Poll serially, three seconds after a completed fetch; pause when hidden,
+  abort on unmount, preserve previous rows on errors, cap displayed rows at 100
+  per device. Timestamps are UTC; source, OS (or unknown), latest step and activity
+  freshness remain visible. Saved activity is never labeled live.
+- `worker_logs.py` auto-selects a job from active worker commands, redacted local
+  session mirrors or a verified saved export. Backend-only optional override;
+  no browser input can select a command/path/credential. Remote activity uses
+  existing operator-only paged exports and verifies the chain before projecting
+  an allowlist. No coordinator authority or recovery wire contract changed.
+- `cloud.py` wraps a worker run in best-effort redacted log capture via `config.py`.
+  The normal stdout log stays intact. Mirrors are private, bounded at 2 MiB;
+  inability to write the mirror cannot stop training. They are diagnostics, not
+  recovery proof. Remote coordinator records are heartbeats/checkpoints/CPU and
+  handoffs, not arbitrary remote terminal stdout or every optimizer update.
+- Observed automatic discovery of the existing Windows `laptop-standby` session
+  for `pi-mvp-01`. Only its session-start record was observed; no optimizer step
+  or Pi reading is inferred from that record. Stale activity is labeled stale.
+- Real separate local Windows CPU smoke check captured actual steps 1, 2, 3,
+  reported active while running and finished after exit; no Pi rows fabricated.
+  Report: `.liferaft/worker-log-verification.json`. This is not cross-device proof.
+- Commands/results: full `.venv/Scripts/python.exe -m unittest discover -s tests
+  -v` PASS: 94 tests in 149.697 s, 2 opt-in live checks skipped. Final focused
+  `test_worker_logs.py` PASS 8/8, including capture failures, partial lines,
+  redaction, tampered remote journal, stale/saved and missing-device behavior.
+  `npm test` PASS 16/16; `npm run test:contracts`, `npm run typecheck`,
+  `npm run build`, and `git diff --check` PASS (line-ending notices only).
+- Browser: story + new worker cases excluding full-duration playback PASS 11/11
+  in 28.4 s. Existing cockpit: 16/19 initially passed, three desktop height
+  expectations failed because rehearsal now includes the required simulated
+  message provenance banner. Kept that banner and updated the overview-fit
+  check to account for its explicit height and the new separate log section.
+  Targeted responsive/axe rerun PASS 6/6 through 320 px. Runner printed a Windows
+  libuv shutdown assertion after reporting those six passes; exit code was 0.
+- Regression check found the rehearsal launcher pointed the original cockpit
+  at a run without its expected `evidence.json`. Added compatible report writing
+  for future rehearsals, and published reports from the four already-verified
+  local journals. No replacement or invented recovery measurements.
+- Prepared ignored `.env.operator` with the existing coordinator origin and an
+  empty token; never borrowed a worker credential to bypass operator access.
+  Remote Pi read gate: team must copy the existing Render
+  `LIFERAFT_OPERATOR_TOKEN` privately into this file's `LIFERAFT_CLOUD_TOKEN`.
+  Exact clicks, verification and local fallback are in README's training-logs
+  section. No manual job-ID lookup is required for a locally running worker.
+- Cannot claim new live Pi logs, hosted read authorization, physical telemetry,
+  or cross-device training success. No hardware, deployments or messages sent.
+  Screenshot inspected: `.liferaft/worker-logs-waiting.png` (actual states).
+
+## 2026-11-08 — Simplified MVP story — DONE
+
+- User requested a simpler website while retaining differentiation. Focused
+  `/story` on three visible panels: 3D handoff, predictive warning and real ghost
+  comparison. Shortened headings, removed background effects and reduced chaos
+  controls. Agent/message/cost panels now open under **Under the hood**;
+  detailed forecast and raw flight recorder open separately. Replay controls,
+  provenance, verified proof and all scenarios preserved.
+- Updated `StoryCockpit.tsx`, `story.css`, related browser selectors and cockpit
+  guidance. No backend, hardware, provider, lease or checkpoint changes.
+- Commands: `npm run typecheck` PASS; `npm run build` PASS;
+  `LIFERAFT_COCKPIT_URL=http://127.0.0.1:3120 npm run test:e2e --
+  web/tests/story.spec.ts --grep-invert hands-free` PASS 8/8 in 16.6 s.
+  Covers proof reveal, expandable replies/cost, scenario verification,
+  failed API state, WebGL fallback and responsive axe through 320 px.
+- Inspected `.liferaft/story-simple-desktop.png` and
+  `.liferaft/story-simple-mobile.png`. Default page height reduced from 2710
+  to 2041 px at 1440 px width; technical panels remain accessible.
+- The 90-second timer is unchanged; its full-duration test was not repeated for
+  this layout change. Python/hardware/provider tests not repeated. No new
+  physical/provider evidence, deployment or required human actions.
+
+## 2026-11-08 — MVP upgrade U2 — DONE (requested demo scope)
+
+- README now leads with the operational problem and pitch, includes one-command
+  startup, a 60-second walkthrough, architecture diagram, exact real/simulated
+  boundaries and optional provider/Pi instructions. Added story guidance to the
+  cockpit plan without replacing existing rules. Original trusted specs, wire
+  schema, journal implementation, leases and checkpoint verification untouched.
+- `LIFERAFT_DEMO_PORT=3121 npm run demo -- --reuse` verified the launcher through
+  Next startup, API, data, browser, captions and proof. It configures the original
+  cockpit with the same cooling-run pointer. API projection now reads completed
+  status without invoking the coordinator watchdog.
+- Additional browser command: with `LIFERAFT_COCKPIT_URL` set to that server,
+  `npm run test:e2e -- web/tests/story.spec.ts --grep 'hands-free|without WebGL'`
+  PASS 2/2: actual full 90-second playback reached real proof and stopped at the
+  final event with no browser page errors; WebGL-disabled fallback readable.
+  Together with U1's full 26/26 run, all 28 browser cases have passing evidence.
+- `npm exec -- prettier --write` on new UI/launcher/tests, then
+  `npm run typecheck`, `node --check scripts/rehearsal.mjs` and
+  `git diff --check` PASS. Repeated focused Python checks PASS 8/8; direct
+  projections verified all four scenarios after the read-only status adjustment.
+- Removed only the untracked `web/AGENTS.md` auto-generated by the dev server
+  during this check; root user instructions retained. No deployment or commit.
+- New actions still not verified: live Nemotron/Photon for these drills,
+  reply-driven cloud migration control, physical Pi/sensors, cross-device
+  ghost equality and network partition scenario. These are explicit MVP limits,
+  not prerequisites for the offline presentation. No human action needed.
+- Final evidence screenshot: `.liferaft/story-playback-complete.png`; screenshots
+  and private generated run files remain ignored. See README for optional live
+  setup. This completes the local MVP slice; original external phase gates stay
+  open. No hardware was stressed, rewired, shut down or power-switched.
+
+## 2026-11-08 — MVP upgrade U1 — DONE (local presentation scope)
+
+- Added `/story`, a loopback-only read API, lazy Three.js worker constellation,
+  forecast ring, actual ghost-loss overlay, expandable read-only tools, mock
+  Photon conversation, illustrative editable cost meter, four chaos replays,
+  hash-chain scrubber and explicit 90-second story with captions/panel focus.
+- Original `/` cockpit and recovery logic unchanged. No new dependencies.
+  `npm run demo` prepares four real drills and starts Next on loopback 3120;
+  `--reuse` uses saved evidence. API verifies chain and final artifact each load.
+- `.venv/Scripts/python.exe -m liferaft.rehearsal --all` PASS, four corrected
+  repeatable runs: cooling RTO 5037.344 ms / RPO 0; crash 2327.531 ms / unknown;
+  corrupt 2491.909 ms / unknown; zombie 5006.202 ms / 0. All completed 100 updates,
+  epoch 2, exact ghost losses and equal final model tensors. RTO begins at
+  coordinator detection; crash kill-to-resume also includes lease waiting.
+- Private evidence pointers: `.liferaft/rehearsal/{scenario}.json`; run logs:
+  `.liferaft/rehearsal-final.log`. These are local process drills, not new
+  physical devices. Corruption touches only a new disposable test artifact.
+- Commands: `npm run typecheck` PASS; `npm run build` PASS; `npm test` PASS
+  (16/16); `npm run test:contracts` PASS. Full Python discovery PASS: 86 tests,
+  2 opt-in live checks skipped, 112.430 s. Focused legacy failover 7/7 PASS.
+- Browser: configured existing local evidence for `/`, production server 3120,
+  `$env:LIFERAFT_COCKPIT_URL='http://127.0.0.1:3120'; npm run test:e2e` PASS
+  26/26 in 42.6 s. Includes all 19 original cases plus proof reveal, four
+  actual scenario APIs, invalid scenario/Host rejection, mock rollback refusal,
+  cost edit, failed verifier display, and responsive axe checks through 320px.
+- Initial browser failures corrected: mobile nowrap overflow and ambiguous
+  test alert selector. Screenshots inspected: `.liferaft/story-proof.png` and
+  `.liferaft/story-mobile.png`; final narrow-width suite passes.
+- Limits: mock approvals never control recovery; cadence recommendation is
+  advisory; no new live provider, Pi, ambient or network-partition evidence.
+  Real provider commands remain in existing operator guides. No human action
+  required. Next U2: README/demo operating instructions and final review.
+
+## 2026-11-08 — MVP upgrade U0 — implemented, focused checks PASS
+
+- Added `docs/UPSCALE_PLAN.md`, additive contracts/schema, `forecast/`,
+  `telemetry/`, read-only `agent/`, mock `notify/` and `rehearsal.py`.
+- Chosen tradeoff: retain the existing recovery core and cockpit; build a
+  separate saved-evidence presentation. Inject a cooling trend without heating.
+  R² is fit quality, not calibrated failure probability. Checkpoint cadence
+  suggestions stay advisory in the MVP. Every new observation/tool/message is
+  appended to the existing chain; the model has no mutation tools.
+- `.venv/Scripts/python.exe -m unittest discover -s tests -p test_upscale.py -v`
+  PASS: 8/8, including stale/noisy/mixed-source rejection, planner failure,
+  mutation-tool rejection, mock controls and schema snapshot.
+- Initial real cooling drill completed 100 steps, resumed at 73, epoch 2,
+  measured RTO 5065.885 ms, RPO 0; all 100 baseline losses exactly matched and
+  final weights matched. This is same-host CPU evidence only.
+- Found and corrected a repeat-run bug: immutable checkpoint publication was
+  also used for the mutable scenario pointer. Pointer now switches atomically;
+  checkpoint immutability is unchanged. Full corrected matrix is running.
+- No hardware/provider calls or new cloud/cross-device proof. No human action
+  needed. Next: U1 presentation, browser QA and final matrix evidence.
+
 ## 2026-11-08 — Launch kit, step 2: website — local delivery
 
 - Scope: user-requested launch page first, followed by slides. Existing Phases

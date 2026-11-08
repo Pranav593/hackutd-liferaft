@@ -350,8 +350,10 @@ def run(args):
             root.mkdir(exist_ok=True, parents=True, mode=0o700)
             store = LocalArtifactStore(Path(tempfile.mkdtemp(prefix=f"cloud-{args.role}-", dir=root)))
             coordinator = CloudWorkerCoordinator(client, store, adaptive=capability.get("edge_protocol") == "v1")
-            run_worker(coordinator, store, job_id=job, worker_id=worker_id, role=args.role,
-                       step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint, adaptive=coordinator.adaptive)
+            from .worker_logs import capture_session
+            with capture_session(job, worker_id):
+                run_worker(coordinator, store, job_id=job, worker_id=worker_id, role=args.role,
+                           step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint, adaptive=coordinator.adaptive)
             return 0
         fields = {}
         if action == "create":

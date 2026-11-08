@@ -107,7 +107,15 @@ for (const width of [1920, 1440, 1280, 768, 390, 320])
     if (width >= 1280) {
       expect(
         await page.evaluate(
-          () => document.documentElement.scrollHeight <= innerHeight + 2,
+          () => {
+            // The required provenance banner adds height for mixed simulated records.
+            // Device logs are an intentional separate section below the overview.
+            const notice = document.querySelector(".simulation-notice");
+            const noticeHeight = notice
+              ? notice.getBoundingClientRect().height + parseFloat(getComputedStyle(notice).marginBottom)
+              : 0;
+            return document.querySelector(".dashboard-shell")!.getBoundingClientRect().bottom - noticeHeight <= innerHeight + 2;
+          },
         ),
       ).toBe(true);
       const areas = await page.locator(".bento").evaluateAll((nodes) =>

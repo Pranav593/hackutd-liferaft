@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "FailureForecast": {
+      "additionalProperties": false,
+      "properties": {
+        "seconds_to_limit": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seconds To Limit"
+        },
+        "slope_c_per_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Slope C Per S"
+        },
+        "fit_quality": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fit Quality"
+        },
+        "threshold_c": {
+          "default": 80.0,
+          "title": "Threshold C",
+          "type": "number"
+        },
+        "eligible": {
+          "default": false,
+          "title": "Eligible",
+          "type": "boolean"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "FailureForecast",
+      "type": "object"
+    },
+    "RehearsalMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "transport": {
+          "const": "mock",
+          "default": "mock",
+          "title": "Transport",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "outbound",
+            "inbound"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 2000,
+          "title": "Text",
+          "type": "string"
+        },
+        "delivery": {
+          "const": "simulated",
+          "default": "simulated",
+          "title": "Delivery",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direction",
+        "text"
+      ],
+      "title": "RehearsalMessage",
+      "type": "object"
+    },
+    "ThermalSample": {
+      "additionalProperties": false,
+      "properties": {
+        "elapsed_s": {
+          "minimum": 0,
+          "title": "Elapsed S",
+          "type": "number"
+        },
+        "cpu_c": {
+          "maximum": 110,
+          "minimum": 0,
+          "title": "Cpu C",
+          "type": "number"
+        },
+        "source_type": {
+          "enum": [
+            "injected",
+            "measured"
+          ],
+          "title": "Source Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "elapsed_s",
+        "cpu_c",
+        "source_type"
+      ],
+      "title": "ThermalSample",
+      "type": "object"
+    },
+    "ToolResult": {
+      "additionalProperties": false,
+      "properties": {
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "result": {
+          "additionalProperties": true,
+          "title": "Result",
+          "type": "object"
+        },
+        "planner": {
+          "const": "deterministic_fallback",
+          "default": "deterministic_fallback",
+          "title": "Planner",
+          "type": "string"
+        },
+        "authority": {
+          "const": "read_only",
+          "default": "read_only",
+          "title": "Authority",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "arguments",
+        "result"
+      ],
+      "title": "ToolResult",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ThermalSample"
+    },
+    {
+      "$ref": "#/$defs/FailureForecast"
+    },
+    {
+      "$ref": "#/$defs/ToolResult"
+    },
+    {
+      "$ref": "#/$defs/RehearsalMessage"
+    }
+  ]
+}

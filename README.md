@@ -1,6 +1,171 @@
 # LIFERAFT
 
-LIFERAFT preserves a CPU training job in verified checkpoints so a backup worker can eventually pick up where the primary left off. See [PHASE_TRACKER.md](PHASE_TRACKER.md) for observed results and the current phase.
+**Your training job never finds out the machine was dying.**
+
+Missed warnings and unclear handoffs turn a failed machine into a lost night of
+training. LIFERAFT watches risk, prepares a software evacuation, resumes a
+checkpoint-aware job on a standby, proves continuity, and briefs the on-call
+engineer. The coordinator ledger is infrastructure; the product is **predict,
+decide, evacuate, prove, brief**.
+
+## Run the MVP presentation
+
+### Pi + Windows training logs
+
+Both `/story` and `/` include **Training activity**, with separate Raspberry Pi
+and Windows panes. The feed refreshes three seconds after each completed read,
+shows recent/stale/finished/saved states, and supports pause and manual refresh.
+Newest entries appear first; all timestamps are UTC. This feed is independent
+of the saved-replay cursor and cannot control recovery.
+
+The dashboard discovers the job from a running local `liferaft cloud ... worker`
+command, automatically captured worker sessions, or the latest verified saved
+export. You do not need to look up a job ID for normal operation. Worker runs
+started with the updated code automatically mirror their redacted structured
+output into ignored `.liferaft/worker-logs/`. Local logs include each real
+optimizer step/loss; remote coordinator activity includes heartbeats (~2s),
+checkpoint commits, Pi CPU readings and handoff events, not arbitrary terminal
+stdout. No physical device is inferred from local rehearsal worker IDs.
+
+**One private setup step for the remote Pi feed:** the dashboard computer needs
+the coordinator operator credential to read events for both devices. The ignored
+`.env.operator` has been prepared with the coordinator origin and an empty token.
+
+1. Open **Render dashboard → liferaft-coordinator → Environment**. Find the
+   existing `LIFERAFT_OPERATOR_TOKEN`. Use that value; do not create a replacement
+   or change the running coordinator's configuration.
+2. On the dashboard computer, open `.env.operator` in your editor. Paste the
+   value after `LIFERAFT_CLOUD_TOKEN=` and save. Keep the existing URL. Never put
+   the token in chat, Git, screenshots, browser code, the Pi profile, or firmware.
+   The operator credential is held only by the local backend; this feed exposes
+   no mutation route and never uses it for an action other than event reads.
+3. Start the workers with their existing shared-job commands and their own Pi /
+   standby profiles. Runs using the updated code record session metadata and
+   terminal logs automatically. The running dashboard rereads its operator file
+   each poll; no dashboard restart or job-ID entry is required.
+4. Verify **LIVE COORDINATOR**, the auto-selected job and timestamped Pi / Windows
+   rows. A connected reader does not imply an active worker: old timestamps are
+   marked stale. If no local worker runs, an optional backend-only
+   `LIFERAFT_LOG_JOB` can select a known job; otherwise run the Windows standby
+   so its job can be discovered.
+
+If access is denied or the network fails, local/saved logs remain available and
+the panel explains the failure. With no readings, the Pi remains **Waiting for
+logs**. It is never substituted with the synthetic demo. The optional
+`LIFERAFT_LOG_WINDOWS_WORKER` maps a nondefault Windows worker ID (default:
+`laptop-standby`); platform metadata is displayed separately when reported.
+Captured local files are untrusted diagnostic output and do not establish
+checkpoint integrity or recovery proof. Coordinator event chains are verified
+before their activity is displayed.
+
+With the existing Python training environment and Node dependencies installed:
+
+```powershell
+npm run demo
+```
+
+This executes four genuine local CPU drills (about two minutes), then starts
+[the story cockpit](http://127.0.0.1:3120/story). Press **Run the story** for an
+explicit 90-second narrated replay with automatic panel focus. The browser is
+read-only. Chaos buttons load observed drills rather than kill processes.
+Use `npm run demo -- --reuse` to start quickly from the last saved evidence.
+Stop the server with Ctrl+C. `LIFERAFT_DEMO_PORT` overrides port 3120.
+No secrets, Pi, provider accounts or internet are needed after installation.
+
+To generate only one fresh drill without starting the web server:
+
+```powershell
+.venv/Scripts/python.exe -m liferaft.rehearsal --scenario cooling
+# Other choices: crash, corrupt, zombie. All four:
+.venv/Scripts/python.exe -m liferaft.rehearsal --all
+```
+
+On macOS/Linux replace `.venv/Scripts/python.exe` with `.venv/bin/python`.
+The new layer is additive; the original [evidence cockpit](http://127.0.0.1:3120/)
+and coordinator/checkpoint verification are preserved. See
+[the upgrade plan](docs/UPSCALE_PLAN.md) and [observed results](PHASE_TRACKER.md).
+
+### A 60-second judge walkthrough
+
+1. **0–10s:** “A dead machine is manageable. A job restarting from zero at 3am isn't.”
+   Show the worker constellation and point out the local-rehearsal disclosure.
+2. **10–20s:** Start the story or scrub to the eligible forecast. Explain the
+   injected cooling trend and estimated thermal crossing; no real heating.
+3. **20–35s:** Open a read-only tool result. Scrub to `LEASE_TRANSFERRED` and the
+   next optimizer step: the deterministic coordinator yields, verifies and fences.
+4. **35–45s:** Scrub to `verify_continuity`: show the real ghost overlay,
+   `0.000000` divergence, matching weights and checkpoint hash prefix.
+5. **45–60s:** Show the simulated on-call brief and ROLLBACK refusal. Select a
+   corrupt-checkpoint or zombie replay to show the failure handling. Explain
+   that live providers are a separate verified operating mode.
+
+### Architecture
+
+```mermaid
+flowchart LR
+  P[Pi or laptop primary] -->|outbound HTTPS| C[Coordinator: leases + epochs + journal]
+  B[Laptop standby] -->|outbound HTTPS| C
+  C <--> S[Private verified checkpoint bytes]
+  E[ESP32 button / ambient] --> G[USB gateway]
+  G -->|outbound HTTPS| C
+  C --> N[Nemotron read-only investigation]
+  C <--> H[Photon signed operator channel]
+  C --> R[Saved verified evidence]
+  R --> U[Read-only cockpit + story replay]
+```
+
+The rehearsal replaces hosted coordination/storage with the existing SQLite
+and local-file adapters. It runs two real processes on **one computer**. It
+does not establish a new cross-device result or migrate arbitrary processes.
+
+### What is real versus simulated
+
+| Capability | This MVP presentation |
+|---|---|
+| Training, checkpoint/resume | Real CPU PyTorch, optimizer and RNG state, actual second process |
+| Ghost run | Fresh uninterrupted seed-1729 baseline; 100 losses and final model tensors compared exactly |
+| Cooling prediction | Explainable estimator over injected readings; R² is trend fit, not failure probability |
+| Crash / corruption / zombie | Real killed dedicated training process, disposable corrupted bytes rejected, stale epoch commit refused |
+| Lease, fence, journal, hash check | Existing deterministic core; API rechecks chain and final checkpoint bytes |
+| Pi / ambient telemetry | Not connected in rehearsal; existing physical collection is separate |
+| Nemotron | Deterministic read-only fallback trace in story; existing live investigation available separately |
+| Photon | Clearly simulated story transport and reply previews; existing live signed STATUS/ACK integration is separate |
+| APPROVE / HOLD / ROLLBACK | Offline interaction previews, no mutation; live approval workflow deferred |
+| Adaptive cadence / worker ranking | Recommendation and single fresh standby evidence; no invented health score or applied cadence claim |
+| Cost avoided | Editable illustrative GPU estimate; unrelated to this measured CPU run |
+| Network partition | Not included in this presentation matrix |
+
+### Optional live provider and hardware mode
+
+The presentation needs **no environment secrets**. To use the existing live
+integrations, follow [the exact provider and Pi steps](docs/PHASES_3_8_OPERATOR_STEPS.md)
+and [team setup](TEAM_SETUP_GUIDE.md). Do not paste keys or phone numbers in chat.
+
+- **NVIDIA:** sign into NVIDIA Build, use its API-key screen, and privately set
+  `NVIDIA_API_KEY` and a tool-capable `NVIDIA_MODEL_ID` in ignored `.env`.
+  Run `liferaft investigate` on an exported incident as documented. Success is a
+  provider trace with evidence-backed tool results. On failure use the clearly
+  labeled deterministic rehearsal. A model never gains recovery authority.
+- **Photon:** sign into [the dashboard](https://app.photon.codes), open the
+  LIFERAFT project, provision an available channel only with team consent,
+  and store the project key as `PHOTON_API_KEY` in ignored `.env.photon`.
+  Use the project Messages view to obtain the consenting operator's direct
+  space and user IDs. The guide's §6 lists exact Render webhook settings and
+  runner variables (`LIFERAFT_CLOUD_URL`, scoped `LIFERAFT_CLOUD_TOKEN`,
+  `PHOTON_PROJECT_ID`, `PHOTON_SPACE_ID`, `PHOTON_OPERATOR_USER_ID`,
+  `PHOTON_AGENT_USER_ID`, `PHOTON_JOB`, `PHOTON_WEBHOOK_SECRET`, and enable flag).
+  Verify a real `STATUS` reply, signed delivery callback and incident `ACK`;
+  provider acceptance alone is not delivery. If provisioning fails, keep the
+  mock transport. `HACKWITHPHOTON` promo eligibility is not verified.
+- **Pi:** use the safety guide's official-power/cooling inspection before
+  connecting hardware, then the existing read-only doctor and scoped worker
+  instructions. Verify CPU telemetry separately from ambient. Leave relay and
+  unknown fan disconnected. If PyTorch/ARM setup fails, retain laptop training
+  and Pi telemetry-only mode; never heat the Pi to demonstrate a fault.
+
+The current [Photon reference](https://photon.codes/docs/beta/api-reference)
+was checked; the pasted hackathon Notion page was inaccessible. No new live
+provider send, physical measurement or deployment is claimed by this upgrade.
 
 For the next hosted, Pi, ESP32, Nemotron and Photon checks, see [the Phases 3–8 bring-up](docs/PHASES_3_8_OPERATOR_STEPS.md).
 

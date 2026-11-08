@@ -23,6 +23,7 @@
     "three": "0.170.0"
   },
   "scripts": {
+    "demo": "node scripts/rehearsal.mjs",
     "dev": "next dev web --hostname 127.0.0.1",
     "build": "next build web",
     "start": "next start web --hostname 127.0.0.1",

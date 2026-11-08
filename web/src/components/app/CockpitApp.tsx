@@ -15,6 +15,7 @@ import { Icon } from "../ui";
 import { Copy } from "../ui/primitives";
 import { DetailDialog, type DetailView } from "../dashboard/DetailDialog";
 import { DashboardCards } from "../dashboard/DashboardCards";
+import { WorkerLogs } from "../workers/WorkerLogs";
 export function CockpitApp() {
   const r = useCockpit((s) => s.replay),
     status = useCockpit((s) => s.status),
@@ -247,6 +248,7 @@ export function CockpitApp() {
           </details>
         )}
       </main>
+      <WorkerLogs />
       <DetailDialog
         view={view}
         onView={setView}
