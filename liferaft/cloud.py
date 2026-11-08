@@ -2,6 +2,7 @@
 from base64 import b64decode, b64encode
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
 import time
@@ -16,7 +17,7 @@ from pydantic import TypeAdapter
 from .artifacts import LocalArtifactStore, verify_data
 from .cloud_api import DEVICE_IDS, MAX_BODY, PRIMARY, TOKEN_PATTERN
 from .config import log, state_dir
-from .contracts import CheckpointManifest, Identifier
+from .contracts import MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier
 from .failover import JobPlan, JobSpec
 
 
@@ -34,8 +35,50 @@ class CloudClient:
         if not TOKEN_PATTERN.fullmatch(token):
             raise ValueError("set the scoped 64-character hex LIFERAFT_CLOUD_TOKEN")
         self.endpoint = url.rstrip("/") + "/v1/control"
+        self.origin = url.rstrip("/")
         self.token = token
         self.opener = build_opener(NoRedirect())
+        self._signed_transfers = None
+
+    def supports_signed_transfers(self):
+        if self._signed_transfers is None:
+            self._signed_transfers = self.call("doctor").get("checkpoint_transfer") == "signed-v1"
+        return self._signed_transfers
+
+    def transfer(self, signed_url, method, *, data=None, limit=MAX_CHECKPOINT_BYTES):
+        # A compromised response must not exfiltrate a worker token to another
+        # host, scheme, route or redirect. Accept only our exact relative route.
+        if not isinstance(signed_url, str) or not re.fullmatch(
+                r"/v1/checkpoint\?ticket=[A-Za-z0-9_-]{1,8100}\.[a-f0-9]{64}", signed_url):
+            raise ValueError("invalid coordinator transfer URL")
+        request = Request(self.origin + signed_url, data=data, method=method, headers={
+            "Content-Type": "application/octet-stream", "Authorization": f"Bearer {self.token}",
+        })
+        try:
+            with self.opener.open(request, timeout=6) as response:
+                raw = response.read(limit + 1)
+                if len(raw) > limit:
+                    raise ValueError("transfer response exceeds size cap")
+                return raw
+        except HTTPError as error:
+            error.close()
+            raise RuntimeError(f"coordinator rejected checkpoint transfer (HTTP {error.code})") from None
+        except (URLError, OSError, ValueError):
+            raise RuntimeError("coordinator unavailable during checkpoint transfer") from None
+
+    def upload_checkpoint(self, manifest, data):
+        verify_data(data, manifest)
+        offer = self.call("upload_url", manifest.job_id, manifest=manifest.model_dump(mode="json"))
+        raw = self.transfer(offer["signed_url"], "PUT", data=data, limit=4096)
+        try:
+            return json.loads(raw)["result"] is True
+        except (KeyError, TypeError, ValueError):
+            raise RuntimeError("invalid checkpoint upload acknowledgment") from None
+
+    def download_checkpoint(self, manifest):
+        offer = self.call("download_url", manifest.job_id, epoch=manifest.lease_epoch,
+                          checkpoint_id=manifest.checkpoint_id)
+        return verify_data(self.transfer(offer["signed_url"], "GET", limit=manifest.size_bytes), manifest)
 
     def call(self, action, job=None, **args):
         body = json.dumps({"action": action, "job": job, "sent_at": time.time(), "args": args},
@@ -80,8 +123,11 @@ class CloudWorkerCoordinator:
         return JobPlan(**self.client.call("claim", job_id, epoch=expected_epoch, checkpoint_id=checkpoint_id))
 
     def commit_checkpoint(self, manifest):
-        data = b64encode(self.store.verified_bytes(manifest)).decode("ascii")
-        return self.client.call("commit", manifest.job_id, manifest=manifest.model_dump(mode="json"), data=data)
+        data = self.store.verified_bytes(manifest)
+        if hasattr(self.client, "supports_signed_transfers") and self.client.supports_signed_transfers():
+            return self.client.upload_checkpoint(manifest, data)
+        return self.client.call("commit", manifest.job_id, manifest=manifest.model_dump(mode="json"),
+                                data=b64encode(data).decode("ascii"))
 
     def yield_or_pause(self, job_id, worker_id, epoch, checkpoint_id):
         return self.client.call("yield", job_id, epoch=epoch, checkpoint_id=checkpoint_id)
@@ -96,9 +142,12 @@ class CloudWorkerCoordinator:
         # An offer is a snapshot, not a lasting authorization. Keep our existing
         # scoped standby identity fresh before the separately authorized GET.
         self.client.call("register", manifest.job_id)
-        raw = self.client.call("download", manifest.job_id, epoch=manifest.lease_epoch,
-                               checkpoint_id=manifest.checkpoint_id)
-        data = verify_data(b64decode(raw, validate=True), manifest)
+        if hasattr(self.client, "supports_signed_transfers") and self.client.supports_signed_transfers():
+            data = self.client.download_checkpoint(manifest)
+        else:
+            raw = self.client.call("download", manifest.job_id, epoch=manifest.lease_epoch,
+                                   checkpoint_id=manifest.checkpoint_id)
+            data = verify_data(b64decode(raw, validate=True), manifest)
         path = self.store.path_for(manifest.path)
         if path.exists():
             self.store.verified_bytes(manifest)

@@ -78,7 +78,7 @@ def application(repository, credentials, *, drills=False):
         action, job, args = request.action, request.job, request.args
         if action == "doctor" and job is None and not args:
             repository.ping()
-            return {"auth": True, "database": True, "role": role}
+            return {"auth": True, "database": True, "role": role, "checkpoint_transfer": "signed-v1"}
         if job is None:
             raise APIError("422 Unprocessable Entity", "JOB_REQUIRED")
         worker = DEVICE_IDS.get(role)

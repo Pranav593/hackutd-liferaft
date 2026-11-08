@@ -707,3 +707,17 @@
   immutable retry, successful roundtrip and post-transfer stale URL denial.
 - No live deployment/Atlas/hardware run; Phase 3 stays IN_PROGRESS. Next: use
   binary transport in workers, with same-origin URL validation and size caps.
+
+### 2026-11-08 — Autonomous software update 4 — Phase 3 worker binary transport
+
+- Workers negotiate signed-v1 through authenticated doctor, upload raw verified
+  bytes, download through expiring URLs and rehash locally. Older coordinators
+  retain the legacy authenticated path for rolling compatibility.
+- Reject absolute/foreign URLs, fragments and alternate routes before attaching
+  credentials. Redirects remain disabled. Downloads and acknowledgments are capped.
+- Files: cloud.py, cloud_api.py, test_cloud.py, test_cloud_transport.py.
+- `.\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_cloud*.py' -v`:
+  15 tests, 13 passed, 2 live checks skipped in 2.463 s. `git diff --check` passed.
+- Binary HTTP tested with offline policy and transport doubles; no new physical
+  cross-device/live signed-transfer evidence claimed. Next: protocol documentation
+  and bounded retries that preserve uncertain ownership outcomes.
