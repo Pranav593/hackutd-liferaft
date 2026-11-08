@@ -61,11 +61,12 @@ LIFERAFT_COCKPIT_JOB=campus-button-05 npm run dev
 ```
 
 Open [the local cockpit](http://127.0.0.1:3000). The cockpit follows the [authoritative cockpit plan](docs/COCKPIT_PLAN.md).
-Use the four rescue beats, replay scrubber, keyboard shortcuts, linked loss/epoch
-views and Inspector to inspect evidence. Re-verify reruns the Python verifier.
+Use the five dashboard cards, replay controls and detail dialogs to inspect
+checkpoint, ownership, loss and event evidence. Re-verify reruns the Python verifier.
 The Handoff Brief supports text/Markdown copy and paper-only printing.
-See [cockpit operation and QA](docs/COCKPIT_IMPLEMENTATION.md) for setup, demo
-bookmarks, graphics fallback and observed acceptance results.
+The cockpit plan also covers operation, graphics fallback and QA commands.
+See [hardware status](docs/HARDWARE_READINESS.md) for measured bench results
+and remaining physical checks.
 
 The console shows saved evidence and listens on loopback. The campus export has
 one measured loss point. To see a full local curve, run the local failover demo

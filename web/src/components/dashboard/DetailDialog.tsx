@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
-import { useCockpit, update } from "../../lib/store/cockpit-store";
+import { useCockpit } from "../../lib/store/cockpit-store";
 import { eventName, utc } from "../../lib/replay";
 import { RecoveryProof } from "../proof/RecoveryProof";
 import { TopologyStage } from "../topology/TopologyStage";
@@ -227,7 +227,6 @@ export function DetailDialog({
         }
       }}
       onClose={() => {
-        update({ inspectorOpen: false });
         onClose();
         opener.current?.focus();
       }}

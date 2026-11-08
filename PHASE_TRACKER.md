@@ -1343,6 +1343,38 @@
   removal-only UI cleanup. No human action required. Next action: browser QA
   alongside completion of the ongoing dashboard/topology work.
 
+### 2026-11-08 — Broad repository consolidation
+
+- Consolidated the superseded cockpit plan, dashboard notes and implementation
+  guide into the current concise COCKPIT_PLAN.md: evidence rules, visual system,
+  operation, accessibility/security boundaries, graphics QA and performance goals.
+- Consolidated three hardware reports into HARDWARE_READINESS.md, retaining
+  measured facts, unresolved sensor identity, private backup provenance, thermal
+  and wiring limits, credentials and remaining physical gates.
+- Removed ENGINEERING_OPERATIONAL_RUNBOOK.md (proposed CLI),
+  docs/COCKPIT_IMPLEMENTATION.md, docs/DASHBOARD_UI.md,
+  docs/DEMO_SCRIPT_AND_SUBMISSION.md, docs/HARDWARE_PROGRESS_REPORT.md and
+  docs/HARDWARE_CONNECTION_REFERENCE.md. Updated README links and UI description.
+  Earlier tracker entries remain historical references, not current file links.
+- Removed disconnected Bloom.ts and its unused configuration/import/lifecycle
+  branches; retained direct rendering. Removed obsolete inspector state and the
+  unused DetailDialog update import. Removed retired narrative.ts and its two
+  helper-specific tests; active dashboard tests retain unknown-metric and
+  verification coverage. Projection continuity checks remain.
+- Commands: npm run typecheck PASS; npm run test:contracts PASS; npm test PASS
+  (16 tests, 3 files); npm run build PASS. The stricter unused-symbol command
+  npm exec -- tsc --noEmit -p web/tsconfig.json --noUnusedLocals
+  --noUnusedParameters also passed. README/docs local Markdown links passed.
+- Browser: set LIFERAFT_COCKPIT_JOB=local-job and LIFERAFT_COCKPIT_LOCAL_RUN to
+  .liferaft/phase2-ahf9ym0g; npm start -- -p 3117. With LIFERAFT_COCKPIT_URL set
+  to http://127.0.0.1:3117, npm run test:e2e PASS: 19/19 in 37.5 seconds.
+  Includes real verifier/security headers, responsive axe checks, keyboard/focus,
+  linked evidence, unknown/error states, clipboard/print and WebGL restoration.
+- No backend, wire contract, recovery or hardware behavior changes. Backend
+  suite not repeated. No new provider, physical hardware or cross-device success
+  claimed; no human action required. Next action: continue remaining live gates
+  from the phase tracker using the consolidated operational documentation.
+
 ### 2026-11-08 — Automatic Photon notification verified
 
 - Ran `bash /tmp/liferaft-photon-smoke.7Z5tL3/notify.sh` on the operator Mac
