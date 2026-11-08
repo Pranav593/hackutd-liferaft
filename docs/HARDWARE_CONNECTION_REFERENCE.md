@@ -1,5 +1,14 @@
 # Hardware connection reference — breadboard assembly deferred
 
+**Current update: standalone OLED bring-up PASSED.** The matching GME family
+manufacturer documentation establishes SSD1306 / I2C / 3.3–5 V support;
+use 3.3 V with this ESP32. Actual 0x3C responses were captured and the operator
+confirmed the expected visible test text. Working reported mapping is GND j1,
+VCC j21 (3V3), SCL j8 (GPIO9), SDA j11 (GPIO8). Button is disconnected while
+oled_test firmware runs. See `hardware/esp32/OLED_SETUP.md`. Historical deferral
+and unknown-rating notes below describe earlier observations. Combined button
+and live coordinator display integration remain unverified.
+
 Updated from operator photos on 2026-11-07 America/Chicago. The operator has
 explicitly deferred OLED/temperature testing and will connect parts later on a
 large breadboard. Treat external-button wiring as part of that later assembly.

@@ -579,3 +579,96 @@
 
 - Pranav ran `.venv/bin/python -m liferaft investigate --job campus-button-05` on the dashboard Mac with an NVIDIA Build key. The supplied terminal output shows `NEMOTRON_INVESTIGATION` from `nvidia/nemotron-3.5-lightning-30b-a3b` with both read-only tool calls and a structured report. Independently matched all eight cited event IDs against the saved verified event export.
 - The report traces the injected button drill, checkpoint step 25, lease transfer to epoch 2, measured resume at step 26, and completion at step 200. The tool evidence records 6.534 s recovery time and zero steps lost. The dashboard integration and additional diagnostic tools are outside the demonstrated CLI scope.
+### 2026-11-08 UTC — OLED bring-up prepared; wiring and physical test pending
+
+- Reused saved front/rear photos and videos plus operator's GND/VCC/SCL/SDA
+  order. Found the matching GoldenMorning GME12864-11/12/13 manufacturer page,
+  specifying SSD1306, 128x64, I2C and 3.3–5 V. This supports a 3.3 V bench plan;
+  it does not prove the physical unit's operation. Source:
+  https://goldenmorninglcd.com/oled-display-module/0.96-inch-128x64-ssd1306-gme12864-11/
+- Read hardware runbook and display requirements. First test shows LIFERAFT /
+  TEST BOARD, labeled LOCAL DISPLAY TEST / CLOUD: NOT LINKED / TEMP: NO SENSOR.
+  Rescue success must later require actual coordinator verification; no fake
+  rescue animation, cloud state or temperature is implemented in the test.
+- Added separate oled_test environment and src/oled_test.cpp with pinned official
+  Adafruit SSD1306 2.5.17, GFX 1.13.0 and BusIO 1.17.4. Verified current official
+  headers before using the Wire constructor and begin signature. SDA GPIO8,
+  SCL GPIO9, 100 kHz bus, 50 ms timeout. Probe 0x3C/0x3D and fail explicitly on
+  zero/two responses or initialization failure. USB status checks acknowledge
+  presence but still require the operator to confirm actual visible text.
+- `python -m platformio run --project-dir hardware/esp32 --environment oled_test`
+  passed in 69.281 s; flash 380,450 bytes, RAM 23,856 bytes. Build files/libraries
+  remain under ignored .liferaft paths. Firmware has NOT been uploaded and OLED
+  has NOT been powered or detected by this session. Git whitespace check passed.
+- Added hardware/esp32/OLED_SETUP.md with unpowered placement: for unchanged ESP32
+  a1-i22 layout, OLED GND/VCC/SCL/SDA at a40/a41/a42/a43, jumpers b40-j3 (GND),
+  b41-j21 (3V3), b42-j8 (GPIO9), b43-j11 (GPIO8). Printed labels must match before
+  power. Existing button can stay wired, but oled_test emits no rescue frames.
+- Current one-shot gateway cannot read job status or keep OLED synchronized after
+  exit. DISPLAY_STATUS command validation and an authorized status transport are
+  still combined-integration work; no gateway permissions or cloud code changed.
+  User next action is unpowered OLED wiring, then reconnect USB for upload and
+  observed I2C/visible-display verification. Temperature/relay/Pi untouched.
+
+### 2026-11-08 UTC — OLED test uploaded; no I2C acknowledgment yet
+
+- Operator reported OLED connected and external button disconnected to free a
+  ground connection. Re-enumeration identified native Espressif USB on COM8.
+- `platformio run --project-dir hardware/esp32 --environment oled_test --target
+  upload --upload-port COM8` passed in 9.856 s. All written sections passed hash
+  verification; application binary 387248 bytes, SHA-256
+  83144f8134f5510ffd415d2b845e246cdf0bb1c229c2fcb214767150545eb2cf.
+- Bounded serial capture received three actual OLED_NOT_DETECTED reports, uptime
+  12044/14044/16044 ms, address 0. Neither supported 0x3C/0x3D address acknowledged
+  on GPIO8 SDA / GPIO9 SCL. Local raw proof is ignored under .liferaft/oled-proof/.
+  Serial port was closed. No visible pixels/display success is claimed.
+- Physical wiring/power/connection inspection is the next action with USB
+  unplugged. Keep supply at 3.3 V, verify printed pin labels and distinct
+  breadboard rows; do not increase to 5 V or rewire while powered. Exact cause
+  is not established. Button stays disconnected during OLED bring-up; no rescue,
+  cloud-state command, relay or Pi action was performed.
+
+### 2026-11-08 UTC — OLED detected after SDA/SCL correction
+
+- Operator clarified actual wiring: GND j1, VCC j21, SCL j11, SDA j8. Signal
+  wires were reversed relative to the tested firmware's GPIO9 SCL / GPIO8 SDA.
+  Instructed unplugging USB, swapping only signal wires, then reconnecting.
+- After operator reported reconnect, bounded serial capture on native COM8
+  observed three actual OLED_TEST_READY frames: uptime 20081/22081/24081 ms,
+  address 60 decimal = 0x3C, local_display_test, cloud_connected false,
+  ambient_valid false. Thus address acknowledgment and driver initialization
+  are verified. The port was closed on completion.
+- Corrected operator-reported map: OLED GND-j1 (GND), VCC-j21 (3V3),
+  SCL-j8 (GPIO9), SDA-j11 (GPIO8). Button remains disconnected. Local proof
+  retained at `.liferaft/oled-proof/corrected-wiring-093113.json` (ignored).
+- Still requires operator confirmation of visible LIFERAFT / TEST BOARD text;
+  acknowledgment alone is not proof of correct pixels. No cloud display state,
+  measured ambient temperature, rescue completion or combined button/OLED
+  behavior is claimed. No new flash or cloud action performed in this check.
+
+### 2026-11-08 UTC — Standalone OLED visible-output test passed
+
+- Operator confirmed seeing all expected lines on the physical OLED: LIFERAFT,
+  TEST BOARD, LOCAL DISPLAY TEST, CLOUD: NOT LINKED, TEMP: NO SENSOR.
+  Combined with three actual OLED_TEST_READY reports at 0x3C, this completes
+  the initial standalone display bring-up test. Visual confirmation is
+  operator-reported; USB acknowledgment was independently captured.
+- Verified/operator-reported wiring for unchanged a1-i22 ESP32 placement:
+  OLED GND-j1, VCC-j21 (3V3), SCL-j8 (GPIO9), SDA-j11 (GPIO8).
+  The earlier detection failure was resolved after correcting swapped signals.
+- Button currently disconnected and oled_test firmware is installed. No combined
+  button handling, live coordinator status, DISPLAY_STATUS command receiver,
+  temperature reading or display disconnection test has been verified. Those
+  remain separate integration gates; Phase 5 is not marked complete.
+
+### 2026-11-08 UTC — Main synchronized and OLED changes validated
+
+- Integrated origin/main through 11eca3d (Nemotron investigation CLI and updated
+  physical-drill evidence), preserving both incoming notes and OLED bench proof.
+- `.\.venv\Scripts\python.exe -m unittest discover -s tests -v` ran 33 tests
+  in 110.470 s: 31 passed, two opt-in live cloud checks skipped. Compilation
+  (`python -m compileall -q liferaft scripts tests`) and Git whitespace checks
+  passed. The commit-content scan found no local credential values, private
+  runtime artifacts or unresolved merge markers in the six changed files.
+- No new live cloud, Pi or hardware action was performed during synchronization.
+  Combined button/OLED and live display status remain outstanding integration.

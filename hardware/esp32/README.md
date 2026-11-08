@@ -3,6 +3,7 @@
 For the external-button build and scoped gateway setup, see
 [BUTTON_SETUP.md](BUTTON_SETUP.md). The default environment still builds this
 board-only test; use `--environment button_only` explicitly for button firmware.
+For OLED wiring and the separate local display test, see [OLED_SETUP.md](OLED_SETUP.md).
 
 This environment is a first physical USB test, not the integrated sensor firmware.
 It drives no accessory GPIO, starts no Wi-Fi and controls no power hardware.
