@@ -47,6 +47,23 @@ assembly resumes. Do not load combined firmware that drives unverified pins.
 
 ## Resume later
 
+### Button identified from the subsequent videos
+
+The operator supplied two local videos (27.17 s and 76.41 s). Extracted frames
+were inspected locally under ignored `.liferaft/video-review/`; no video was
+uploaded elsewhere. The second video clearly shows a three-pin pushbutton
+breakout, with `S` at left and `-` at right when component side faces the viewer
+and the pins point down; the middle pin is unlabeled in the visible frame.
+It is KY-004-style, not a bare four-leg button. The matching Joy-IT manual
+describes active-low switch-to-ground operation. For the initial test, use the
+S/- pair with the firmware's internal pull-up and leave the middle pin open.
+Physical switch behavior and final wire placement are not yet tested.
+
+The breadboard video shows numbered rows and columns a-e/f-j on either side of
+the center gap. Exact ESP32 header row placement must be checked from the actual
+assembled still before assigning jumper coordinates. Keep all three button pins
+on distinct numbered rows. Sensor/OLED work remains deferred.
+
 Bring the large breadboard, jumpers, separate button and the identified parts.
 Unplug ESP32 USB before inserting/removing any wire. First establish the actual
 breadboard rail continuity and board placement, then verify the separate button

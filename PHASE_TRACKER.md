@@ -58,6 +58,7 @@
 
 ### Phase 5 — ESP32-S3 sensor node, button and OLED — IN_PROGRESS (physical bench)
 - [x] Native USB enumeration, chip/flash identity, private original-flash backup, and real board-only USB serial hello verified on Windows.
+- [x] External GPIO5 button emitted a real contract-valid injected USB frame; local monitor exited and released COM8. Gateway and standby cloud doctors passed.
 - [ ] Exact PCB revision and accessory pinouts checked before accessory wiring; chip revision and board-only hello are verified above.
 - [ ] Button with pull-up/debounce emits *injected* test incident.
 - [ ] OLED verified I2C voltage/address displays cloud-reported state.
@@ -353,3 +354,105 @@
 - `PYTHONPATH=tests .venv/bin/python -` exercised a synthetic serial frame through the bridge parser, WSGI API, disposable local persistence and real PyTorch workers. The primary yielded at step 15, the standby resumed at 16 under epoch 2, and the job completed step 30 with zero lost steps and a verified event chain. The serial input and cloud transport were simulated for this run.
 - Added opt-in hosted authorization and isolated Atlas rollback/immutability checks in `tests/test_cloud_live.py`. `LIFERAFT_TEST_HOSTED=1 .venv/bin/python -m unittest discover -s tests -p test_cloud_live.py -v` stopped at the coordinator preflight. The execution shell could not resolve the Render host. The isolated Atlas test was skipped because no test URI was configured. These live gates, signed transfers, and the physical button drill remain open.
 - Next step is gateway provisioning and deployment, then a real serial frame from Ved's button-only firmware and the Windows bridge command in `docs/PHASE_3_ATLAS_SETUP.md` §5. No hardware was accessed or changed.
+
+### 2026-11-08 UTC — Laptop B button firmware and private gateway preparation
+
+- Reviewed main `82c31f7` and the merged gateway implementation. It supplied the
+  bridge/API/strict schema but no button-only firmware; installed source still
+  contained only the USB hello. USB enumeration in this session lists Bluetooth
+  COM3–COM6 only, with no connected ESP32. No serial monitor or bridge is holding
+  an ESP32 port; no physical button press is claimed.
+- Installed `pyserial==3.5` in the existing project `.venv`. Created `.env.gateway`
+  with exclusive creation, the correct Render origin, actual newlines and a new
+  private token. Token was not displayed. Verified ignored status, correct origin
+  and valid 64-character hex format without printing its value. `pip check` passed.
+- `python -m liferaft cloud --profile gateway doctor` reached the coordinator but
+  returned HTTP 401. Server-side acceptance/deployment is unverified; the service
+  account holder must privately set matching `LIFERAFT_GATEWAY_TOKEN`, retain
+  drills enabled and deploy the merged gateway code. No Render secret changed by
+  this session and no rescue requested.
+- Added separate `button_only` PlatformIO environment and source, preserving the
+  default board-only environment. GPIO5 is input with pull-up; 75 ms debounce,
+  stable release before initial trigger, no held repeat, 500 ms event gap. It
+  emits the exact injected COOLING_FAILURE_TEST frame, no fabricated ambient
+  measurement. No sensor/OLED/Wi-Fi/relay/power-control functions are enabled.
+- `python -m platformio run --project-dir hardware/esp32 --environment button_only`
+  passed in 39.738 s, with program flash 315,206 bytes and RAM 22,344 bytes. This
+  firmware was NOT uploaded because the board is not connected. An extracted
+  actual firmware printf format produced a synthetic 201-byte frame that passed
+  strict ButtonEvent validation and the existing bridge parser; this is format
+  evidence, not a physical event.
+- `.venv/Scripts/python.exe -m unittest discover -s tests -p test_cloud.py -v`
+  passed 6/6 in 8.601 s. Compilation of the new local checker and Git whitespace
+  checks passed. Added `scripts/esp32_button_check.py` using the teammate's actual
+  parser, a 45 s deadline, explicit native USB port selection, no cloud request,
+  and automatic port close. Added `hardware/esp32/BUTTON_SETUP.md` with exact
+  account-holder instructions and physical prerequisites.
+- Required human actions: reconnect ESP32 native USB with accessories removed;
+  supply separate-button photo before terminal-specific wiring; have the Render
+  account holder provision the matching private gateway token. Then engineer can
+  upload, check an actual press locally, release the port, rerun gateway doctor,
+  and arm against a fresh agreed job only when primary/standby are ready. Physical
+  press, deployed gateway auth and real button-triggered recovery remain open.
+
+### 2026-11-08 UTC — Gateway authentication verified; physical button test next
+
+- Rechecked the existing `.env.gateway` without regenerating its credential.
+  `git check-ignore .env.gateway` passed; project environment reports pySerial
+  3.5. The pasted command's malformed URL/newline is not used.
+- `.venv/Scripts/python.exe -m liferaft cloud --profile gateway doctor` exited 0
+  at `2026-11-08T04:50:33.614973+00:00` and returned `auth: true`,
+  `database: true`, `role: gateway`. This supersedes the earlier 401 blocker.
+  No token or Render secret was printed or changed during this check.
+- USB enumeration currently shows only Bluetooth COM3–COM6, no ESP32. No serial
+  monitor is open, no button firmware uploaded and no rescue request sent in this
+  session. Human next step: unplug USB, present separate button/breadboard for
+  terminal and row identification, then follow exact unpowered wiring instructions.
+- Profile/dependency preparation and authenticated gateway doctor are complete.
+  Real button-frame emission and end-to-end button-triggered recovery remain open;
+  doctor alone is not evidence of either. Temperature/OLED stay disconnected.
+
+### 2026-11-08 UTC — Button module identified from operator videos
+
+- Inspected extracted frames from both supplied local videos (27.17 s / 76.41 s).
+  The second shows a three-pin KY-004-style tactile switch breakout, S at left
+  and - at right with component side facing the viewer and pins down. Middle
+  pin remains unlabeled. Breadboard row/column markings are visible. Exact part
+  vendor is unconfirmed; matching primary Joy-IT documentation describes the
+  switch connecting signal to ground.
+- Updated button/setup reference for a two-wire S/- test using GPIO5 INPUT_PULLUP,
+  with center pin unconnected; no module supply, sensor, OLED or resistor wiring.
+  First human step is unpowered breadboard placement and a still showing actual
+  ESP32 header alignment; no exact GPIO jumper row is assumed before that check.
+- Added video-decoding helpers to the isolated hardware tools only; extracted
+  inspection images stay ignored under `.liferaft/video-review/`. No media or
+  credentials uploaded/committed. `git diff --check` passed.
+- Serial enumeration still shows Bluetooth ports only. No ESP32 flash, physical
+  press, bridge arming or rescue occurred during video review. Earlier live
+  gateway doctor remains passed; hardware frame and integrated drill remain open.
+
+### 2026-11-08 UTC — Physical button USB frame verified on Laptop B
+
+- Operator reported unpowered placement with ESP32 headers a1 through i22,
+  GPIO5 at i18 accessible via j18, ground at i1 via j1, and button header in
+  separate a30/a31/a32 rows. Instructions connect S to GPIO5 and - to GND, leaving
+  middle pin unconnected. Operator declined an assembled-wiring photo and reported
+  completing the connections; wiring is operator-reported, not visually inspected.
+- Native USB reconnected on COM8. Button-only PlatformIO upload passed in 8.976 s;
+  all written sections were hash-verified. Application is 320,496 bytes with
+  SHA-256 ba9418ba07ce97ce3d22f6df6216da640dc5983d6477bd4dfab1b88eea4382d4.
+- Passive serial read observed three LIFERAFT_BUTTON_READY messages, then closed
+  the port. `python -m scripts.esp32_button_check --port COM8` armed locally and
+  accepted a physical press through the actual bridge parser: protocol 1,
+  esp32-s3-01, seq 1, uptime 54483 ms, ambient null/invalid, button true,
+  COOLING_FAILURE_TEST, source injected. Exited 0; port released; no cloud request.
+  Retained evidence: `.liferaft/button-proof/first-physical-press.json` (ignored).
+- Existing standby and gateway doctor commands both exited 0 with auth/database
+  true and matching roles at 2026-11-08T05:20:34/35 UTC. Training doctor exited 0
+  with PyTorch 2.15.0+cpu and cpu_verified true on Windows. No token regenerated.
+- Laptop B preparation and real button-frame gate are complete. Full cloud
+  physical-button recovery is NOT yet demonstrated. Need Laptop A to create a
+  fresh agreed test job; next start Laptop B standby, verify readiness, start
+  Laptop A primary, arm bridge, press once after a committed checkpoint, and
+  retain final completion/event-chain evidence. No new job or rescue was issued
+  by this hardware session yet. OLED, temperature sensor and relay untouched.
