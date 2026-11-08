@@ -33,6 +33,7 @@ static uint32_t last_button = 0;
 static uint32_t last_status = 0;
 static uint32_t last_draw = 0;
 static const char *display_state = "OFFLINE";
+static char training_id[4] = "---";
 
 static bool acknowledges(uint8_t address) {
   Wire.beginTransmission(address);
@@ -117,6 +118,20 @@ static void receive_status(uint32_t now) {
     }
     line[used] = '\0';
     if (!discard) {
+      // Display-only identifier: exactly three digits, never executable input.
+      const char *prefix = "{\"type\":\"DISPLAY_TRAINING\",\"id\":\"";
+      const size_t offset = strlen(prefix);
+      if (strncmp(line, prefix, offset) == 0 && strlen(line) == offset + 5
+          && strcmp(line + offset + 3, "\"}") == 0) {
+        bool valid = true;
+        for (size_t i = 0; i < 3; ++i)
+          valid = valid && line[offset + i] >= '0' && line[offset + i] <= '9';
+        valid = valid || strncmp(line + offset, "---", 3) == 0;
+        if (valid) {
+          memcpy(training_id, line + offset, 3);
+          training_id[3] = '\0';
+        }
+      }
       for (const char *state : states) {
         char expected[80];
         snprintf(expected, sizeof(expected), "{\"type\":\"DISPLAY_STATUS\",\"state\":\"%s\"}", state);
@@ -141,23 +156,24 @@ static void draw_status(uint32_t now) {
   screen.setTextSize(2);
   screen.setCursor(0, 0);
   screen.print("LIFERAFT");
+  screen.setCursor(0, 16);
+  screen.print("Training");
+  screen.setCursor(0, 32);
+  screen.print("ID: #");
+  screen.print(now - last_status >= DISPLAY_TIMEOUT ? "---" : training_id);
   screen.setTextSize(1);
-  screen.setCursor(0, 24);
+  screen.setCursor(0, 48);
   const char *state = now - last_status >= DISPLAY_TIMEOUT ? "OFFLINE" : display_state;
-  if (strcmp(state, "OFFLINE") == 0) screen.print("CLOUD OFFLINE");
-  else if (strcmp(state, "READY") == 0) screen.print("GATEWAY READY");
+  screen.print(strcmp(state, "OFFLINE") == 0 ? "Cloud: Offline" : "Cloud: Linked");
+  screen.setCursor(0, 56);
+  if (strcmp(state, "OFFLINE") == 0) screen.print("SAFE MODE");
+  else if (strcmp(state, "READY") == 0) screen.print(ambient_valid ? "GATEWAY READY" : "SENSOR INVALID");
   else if (strcmp(state, "WAITING") == 0) screen.print("WAITING FOR JOB");
   else if (strcmp(state, "DISARMED") == 0) screen.print("DRILL DISARMED");
   else {
     screen.print("TEST / ");
     screen.print(state);
   }
-  screen.setCursor(0, 44);
-  if (ambient_valid) {
-    screen.print("AMBIENT ");
-    screen.print(ambient_c, 1);
-    screen.print(" C");
-  } else screen.print("SENSOR INVALID");
   screen.display();
 }
 

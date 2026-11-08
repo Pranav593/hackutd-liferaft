@@ -1,5 +1,6 @@
 """Bounded USB bridge. Ambient telemetry has no rescue authority."""
 import json
+import re
 import time
 from uuid import uuid4
 
@@ -69,6 +70,11 @@ def monitor(client, job, connection, *, clock=time.monotonic):
     button_attempted = False
 
     def display(state):
+        # Show the job's numeric suffix; never invent a training number.
+        suffix = re.search(r"(?:^|[^0-9])([0-9]{1,3})$", job)
+        connection.write((json.dumps({"type": "DISPLAY_TRAINING",
+                                      "id": suffix.group(1).zfill(3) if suffix else "---"},
+                                     separators=(",", ":")) + "\n").encode())
         connection.write((json.dumps({"type": "DISPLAY_STATUS", "state": state},
                                      separators=(",", ":")) + "\n").encode())
 

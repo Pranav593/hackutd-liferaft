@@ -40,15 +40,14 @@ void setup() {
   screen.setTextSize(2);
   screen.setCursor(0, 0);
   screen.print("LIFERAFT");
-  screen.setTextSize(1);
-  screen.setCursor(0, 20);
-  screen.print("TEST BOARD");
+  screen.setCursor(0, 16);
+  screen.print("Training");
   screen.setCursor(0, 32);
-  screen.print("LOCAL DISPLAY TEST");
-  screen.setCursor(0, 44);
-  screen.print("CLOUD: NOT LINKED");
-  screen.setCursor(0, 56);
-  screen.print("TEMP: NO SENSOR");
+  screen.print("ID: #---");
+  screen.setTextSize(1);
+  screen.setCursor(0, 48);
+  // Operator-requested static label, not a network connectivity assertion.
+  screen.print("Cloud: Online");
   screen.display();
   initialized = true;
 }

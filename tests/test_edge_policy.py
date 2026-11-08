@@ -62,7 +62,7 @@ class EdgePolicyTests(unittest.TestCase):
 
         def call(action, job, **data):
             nonlocal requested
-            self.assertEqual(job, "test-job")
+            self.assertEqual(job, "test-job-05")
             if action == "ambient":
                 self.assertEqual(data["ambient_temp_c"], 24.5)
                 return True
@@ -74,11 +74,14 @@ class EdgePolicyTests(unittest.TestCase):
 
         gateway.call.side_effect = call
         with redirect_stdout(io.StringIO()):
-            monitor(gateway, "test-job", device, clock=lambda: tick)
+            monitor(gateway, "test-job-05", device, clock=lambda: tick)
         actions = [item.args[0] for item in gateway.call.call_args_list]
         self.assertEqual(actions.count("ambient"), 1)
         self.assertEqual(actions.count("button"), 1)
-        displayed = [json.loads(item.args[0])["state"] for item in device.write.call_args_list]
+        messages = [json.loads(item.args[0]) for item in device.write.call_args_list]
+        self.assertEqual([item["id"] for item in messages if item["type"] == "DISPLAY_TRAINING"],
+                         ["005"] * (len(messages) // 2))
+        displayed = [item["state"] for item in messages if item["type"] == "DISPLAY_STATUS"]
         self.assertIn("RECOVERED", displayed)
         self.assertEqual(displayed[-1], "OFFLINE")
 

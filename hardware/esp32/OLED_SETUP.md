@@ -63,11 +63,22 @@ Expected first display, per the hardware runbook's initial test requirement:
 
 ```text
 LIFERAFT
-TEST BOARD
-LOCAL DISPLAY TEST
-CLOUD: NOT LINKED
-TEMP: NO SENSOR
+Training
+ID: #---
+Cloud: Online
 ```
+
+Title and training fields use size-2 text, split across three 16-pixel rows.
+The live `edge` layout uses the remaining two rows for cloud and safety status.
+The bridge sends a strict `DISPLAY_TRAINING` command containing the job's
+one-to-three-digit suffix, zero padded (job `campus-button-05` shows `#005`).
+Jobs without that suffix show `#---`; the number is a short display label,
+not a replacement for the full job ID. Stale status hides the old number.
+`Cloud: Linked` requires fresh coordinator-backed status; after seven seconds
+without status, the screen shows `Cloud: Offline`. The standalone bench test
+has no network connection or training ID. Its operator-requested `Cloud: Online`
+text is a static presentation label; serial reports retain `cloud_connected=false`.
+Text APIs checked against the [official GFX guide](https://learn.adafruit.com/adafruit-gfx-graphics-library/graphics-primitives).
 
 The USB reporter emits OLED_TEST_READY only while the address acknowledges.
 That means device response and test initialization, not proof a person saw correct
