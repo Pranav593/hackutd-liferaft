@@ -13,8 +13,6 @@
 
 | Existing file | Disposition |
 |---|---|
-| `docs/UI_DESIGN_SYSTEM.md` | **Superseded entirely.** Replace its body with a 3-line pointer to this file. |
-| `docs/UPSCALE_PLAN.md` §3 (items 1, 2, 3, 5 as UI) and §5 build order | **Superseded** by §3, §7, §12 here. Keep §1 judging fit, §2 tracks and §4 users in that file. |
 | `LIFERAFT_MASTER_SPEC.md` §11 (Frontend) | **Superseded** for UI. Its honesty rules are copied verbatim into §0.2. |
 | `AGENTS.md` "Upscale addendum" | Edit to say: *"UI source of truth is `docs/COCKPIT_PLAN.md`."* |
 | `web/demo/index.html` | **Frozen reference, then deleted** after the parity check in §2.3. |

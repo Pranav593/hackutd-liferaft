@@ -60,7 +60,7 @@ export class TopologyEngine {
   private rendered = 0;
   private average = 0;
   private tier: Tier;
-  private rim = new PointLight(0x5ff0d6, 12, 15);
+  private rim = new PointLight(0xa8dadc, 0, 15);
   private observer: ResizeObserver;
   private intersection: IntersectionObserver;
   private reduced = false;
@@ -119,9 +119,7 @@ export class TopologyEngine {
     for (let y = 0; y < 32; y++)
       for (let x = 0; x < 32; x++) {
         const i = (y * 32 + x) * 4;
-        shadowData[i + 3] = Math.round(
-          Math.max(0, 1 - Math.hypot(x - 15.5, y - 15.5) / 16) ** 2 * 160,
-        );
+        shadowData[i + 3] = 20;
       }
     const texture = this.keep(new DataTexture(shadowData, 32, 32, RGBAFormat));
     texture.needsUpdate = true;
@@ -149,7 +147,7 @@ export class TopologyEngine {
       ),
     );
     this.scene.add(shadows);
-    const grid = new GridHelper(12, 24, 0x244b5c, 0x172a43);
+    const grid = new GridHelper(12, 24, 0x457b9d, 0x457b9d);
     grid.position.y = -0.4;
     this.scene.add(grid);
     this.keep(grid.geometry);
@@ -190,7 +188,7 @@ export class TopologyEngine {
         const pins = this.keep(
           new InstancedMesh(
             this.keep(new BoxGeometry(0.025, 0.13, 0.025)),
-            this.keep(new MeshBasicMaterial({ color: 0x5ff0d6 })),
+            this.keep(new MeshBasicMaterial({ color: 0xa8dadc })),
             8,
           ),
         );
@@ -227,7 +225,7 @@ export class TopologyEngine {
     }
     this.packet = new InstancedMesh(
       this.keep(new SphereGeometry(0.065, 8, 6)),
-      this.keep(new MeshBasicMaterial({ color: 0x5ff0d6 })),
+      this.keep(new MeshBasicMaterial({ color: 0xa8dadc })),
       8,
     );
     this.keep(this.packet);
@@ -235,13 +233,13 @@ export class TopologyEngine {
     this.scene.add(this.packet);
     this.baton = new Mesh(
       this.keep(new TorusGeometry(0.3, 0.025, 6, 32)),
-      this.keep(new MeshBasicMaterial({ color: 0x5ff0d6 })),
+      this.keep(new MeshBasicMaterial({ color: 0xa8dadc })),
     );
     this.baton.visible = false;
     this.scene.add(this.baton);
     this.notches = new InstancedMesh(
       this.keep(new BoxGeometry(0.025, 0.025, 0.09)),
-      this.keep(new MeshBasicMaterial({ color: 0x5ff0d6 })),
+      this.keep(new MeshBasicMaterial({ color: 0xa8dadc })),
       32,
     );
     this.keep(this.notches);
@@ -257,7 +255,7 @@ export class TopologyEngine {
     this.intersection.observe(canvas);
     document.addEventListener("visibilitychange", this.visibility);
     this.resize();
-    this.configureBloom();
+    // Flat illustration style: no bloom or halo passes.
   }
   private keep<T extends Disposable>(resource: T): T {
     this.resources.add(resource);
@@ -270,35 +268,18 @@ export class TopologyEngine {
     this.keep(geometry);
     const material = this.keep(
       new MeshStandardMaterial({
-        color: glow ? 0x2d8f8a : 0x162b47,
-        emissive: glow ? 0x236d68 : 0x000000,
-        emissiveIntensity: glow ? 0.7 : 0,
+        color: glow ? 0xa8dadc : 0x1d3557,
+        emissive: glow ? 0x457b9d : 0x000000,
+        emissiveIntensity: 0,
         roughness: 0.35,
         metalness: 0.1,
       }),
     );
     const mesh = new Mesh(geometry, material);
-    if (!glow)
-      material.onBeforeCompile = (shader) => {
-        shader.vertexShader =
-          "varying vec3 vRaftNormal; varying vec3 vRaftView;\n" +
-          shader.vertexShader;
-        shader.vertexShader = shader.vertexShader.replace(
-          "#include <project_vertex>",
-          "#include <project_vertex>\nvRaftNormal=normalize(normalMatrix*objectNormal); vRaftView=normalize(-mvPosition.xyz);",
-        );
-        shader.fragmentShader =
-          "varying vec3 vRaftNormal; varying vec3 vRaftView;\n" +
-          shader.fragmentShader;
-        shader.fragmentShader = shader.fragmentShader.replace(
-          "#include <dithering_fragment>",
-          "#include <dithering_fragment>\ngl_FragColor.rgb += pow(1.0-abs(dot(normalize(vRaftNormal),normalize(vRaftView))),3.0)*vec3(0.03,0.14,0.15);",
-        );
-      };
     const edgeGeometry = this.keep(new EdgesGeometry(geometry)),
       edgeMaterial = this.keep(
         new LineBasicMaterial({
-          color: 0x5ff0d6,
+          color: 0xa8dadc,
           transparent: true,
           opacity: 0.4,
         }),
@@ -333,7 +314,7 @@ export class TopologyEngine {
       ),
     );
     if (this.observer) this.resize();
-    this.configureBloom();
+    // Flat illustration style: no bloom or halo passes.
   }
   private configureBloom() {
     if (this.tier !== "high") {
@@ -383,17 +364,17 @@ export class TopologyEngine {
       g.traverse((o) => {
         if (o instanceof InstancedMesh) {
           (o.material as MeshBasicMaterial).color.setHex(
-            n.seen ? 0x5ff0d6 : 0x62779c,
+            n.seen ? 0xa8dadc : 0x457b9d,
           );
         }
         if (o instanceof LineSegments) {
           const line = o.material as LineBasicMaterial;
-          line.color.setHex(n.seen ? 0x5ff0d6 : 0x62779c);
+          line.color.setHex(n.seen ? 0xa8dadc : 0x457b9d);
           line.opacity = n.seen ? 0.4 : 0.2;
         }
         if (o instanceof Mesh && !(o instanceof InstancedMesh)) {
           const m = o.material as MeshStandardMaterial;
-          m.color.setHex(n.seen ? (n.active ? 0x287d78 : 0x162b47) : 0x152036);
+          m.color.setHex(n.seen ? (n.active ? 0x457b9d : 0x1d3557) : 0x1d3557);
         }
       });
       const lid = this.screens.get(n.id);
@@ -503,7 +484,7 @@ export class TopologyEngine {
               .add(new Vector3(0, 0.6, 0));
       const path = new CatmullRomCurve3([a, mid, b]);
       const p = path.getPoint(progress * progress * (3 - 2 * progress));
-      const color = t.source === "injected" ? 0xffb84d : 0x5ff0d6;
+      const color = t.source === "injected" ? 0xe63946 : 0xa8dadc;
       (this.packet.material as MeshBasicMaterial).color.setHex(color);
       (this.baton.material as MeshBasicMaterial).color.setHex(color);
       if (progress < 1) {

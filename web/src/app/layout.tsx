@@ -23,7 +23,7 @@ const serif = localFont({
   style: "italic",
   display: "swap",
 });
-export const viewport: Viewport = { themeColor: "#060B16" };
+export const viewport: Viewport = { themeColor: "#F1FAEE" };
 
 export default function RootLayout({
   children,

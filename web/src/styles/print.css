@@ -1,60 +1,52 @@
 @media print {
   body {
-    background: #eeebe3 !important;
-    color: #0b1426 !important;
+    background: #f1faee !important;
+    color: #1d3557 !important;
   }
-  body:before,
-  .site-header,
-  .mode-banner,
-  .section-nav,
-  .skip-link,
-  footer,
-  .scrubber,
-  .shortcut-help,
-  .no-print,
-  .cockpit:before {
+  body > * {
     display: none !important;
   }
-  .shell {
+  body > .detail-dialog {
+    display: block !important;
+    position: static !important;
+    max-height: none !important;
+    border: 0;
     width: 100%;
     margin: 0;
+    padding: 0;
   }
-  .cockpit > section,
-  .cockpit > nav {
+  .detail-dialog::backdrop {
+    display: none;
+  }
+  .detail-top,
+  .detail-tabs,
+  .detail-intro,
+  .glossary,
+  .no-print,
+  .copy-status,
+  .detail-scroll .nemotron-panel {
     display: none !important;
   }
-  .cockpit > #intelligence {
-    display: block !important;
-    margin: 0;
+  .detail-scroll {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
   }
-  .cockpit > #intelligence > .section-title,
-  #intelligence > details > summary,
-  .nemotron-panel {
-    display: none !important;
-  }
-  .intelligence-grid {
+  .detail-grid {
     display: block;
+  }
+  .detail-scroll > *:not(.detail-grid) {
+    display: none;
   }
   .handoff {
-    display: block;
+    background: #f1faee;
     box-shadow: none;
     border: 0;
     padding: 12mm;
-    width: 100%;
     break-inside: avoid;
   }
-  #intelligence > details {
-    display: block;
-  }
-  #intelligence > details > * {
-    visibility: visible;
-  }
-  .handoff .copy-status {
+  .handoff .inline-actions {
     display: none;
-  }
-  .numbered-section {
-    content-visibility: visible;
-    contain: none;
   }
   @page {
     size: A4;

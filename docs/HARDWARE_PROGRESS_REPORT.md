@@ -109,7 +109,6 @@ Actual hardware proof comes from serial capture, not compilation alone.
   Environment files, original flash and build binaries remain ignored/excluded.
 - Resolved the tracker conflict by retaining both the upstream cross-laptop
   software evidence/failure and this hardware session's independent results.
-- Shareable summary in `docs/HARDWARE_SHARE_SUMMARY.md`: exactly 200 words.
 - On-Pi execution of the new health script/systemd units, sensor/OLED/button bench
   tests and integrated cloud hardware recovery were not run. No TypeScript source
   was changed; no TypeScript build was claimed during this publication.

@@ -7,9 +7,6 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
-    "@fontsource/geist": "5.2.6",
-    "@fontsource/geist-mono": "5.2.6",
-    "@fontsource/instrument-serif": "5.2.5",
     "@playwright/test": "1.56.1",
     "@types/node": "22.20.4",
     "@types/react": "19.2.2",

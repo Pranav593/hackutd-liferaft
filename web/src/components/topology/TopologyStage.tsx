@@ -146,23 +146,12 @@ export function TopologyStage() {
               <path
                 d="M32 0H0V32"
                 fill="none"
-                stroke="#25415c"
+                stroke="#457B9D"
                 strokeWidth=".6"
               />
             </pattern>
-            <radialGradient id="topo-light">
-              <stop stopColor="#164350" stopOpacity=".4" />
-              <stop offset="1" stopColor="#060b16" stopOpacity="0" />
-            </radialGradient>
           </defs>
           <rect width="800" height="450" fill="url(#topo-grid)" />
-          <ellipse
-            cx="400"
-            cy="220"
-            rx="330"
-            ry="210"
-            fill="url(#topo-light)"
-          />
           {frame.nodes
             .filter((n) => n.id !== "coordinator")
             .map((n) => {
@@ -172,14 +161,14 @@ export function TopologyStage() {
                   key={n.id}
                   d={`M${x * 8} ${y * 4.5} Q400 ${y * 4.5} 400 198`}
                   fill="none"
-                  stroke={n.active ? "#5ff0d6" : "#62779c"}
+                  stroke={n.active ? "#A8DADC" : "#457B9D"}
                   strokeWidth={n.active ? 2 : 1}
                   strokeDasharray={n.seen ? "" : "5 7"}
                 />
               );
             })}
-          <circle cx="400" cy="198" r="38" fill="#142d43" stroke="#5ff0d6" />
-          <circle cx="400" cy="198" r="52" fill="none" stroke="#2a656e" />
+          <circle cx="400" cy="198" r="38" fill="#1D3557" stroke="#A8DADC" />
+          <circle cx="400" cy="198" r="52" fill="none" stroke="#457B9D" />
         </svg>
         {gl && (
           <Canvas

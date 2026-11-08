@@ -1127,3 +1127,38 @@
   133479 gzip bytes, CLS 0.0000004778374566. Budget misses are unchanged.
 - Refreshed final screenshots. The five-minute soak remains applicable to the
   unchanged scene resources/lifecycle. No additional external action performed.
+
+### 2026-11-08 — Repository cleanup
+
+- Removed obsolete bootstrap instructions (`CODEX_START_PROMPT.txt`,
+  `README_START_HERE.md`), superseded UI/judging notes
+  (`docs/UI_DESIGN_SYSTEM.md`, `docs/UPSCALE_PLAN.md`), and the outdated
+  `docs/HARDWARE_SHARE_SUMMARY.md`. Removed their active pointers from the
+  cockpit plan and hardware report; earlier tracker entries remain historical.
+- Removed three unused `@fontsource/*` development dependencies and their lock
+  entries. The app uses vendored WOFF2 files through `next/font/local`.
+- Added `.gitignore` rules for Playwright reports, test results and PlatformIO
+  output. Retained runtime modules, hardware diagnostics, QA scripts, tests,
+  licenses, required specifications and operational/safety guides.
+- Commands: `npm uninstall --save-dev @fontsource/geist @fontsource/geist-mono
+  @fontsource/instrument-serif --ignore-scripts --no-audit --no-fund` PASS;
+  `npm run test:contracts` PASS; `npm test` PASS (14/14);
+  `git diff --check` PASS (line-ending notices only).
+- `npm run typecheck` FAIL: TS2306 because the pre-existing modified
+  `web/src/components/app/CockpitApp.tsx` is empty. Existing dashboard and style
+  edits were preserved. Production build/browser verification cannot be
+  completed with that entry component empty.
+- Backend command: `.venv\Scripts\python.exe -m unittest discover -s tests -v`.
+  Final result recorded below after completion. No remote provider or physical
+  hardware verification performed. No human action required for cleanup.
+- Next action: finish the existing cockpit edit, then rerun typecheck/build and
+  browser QA. No recovery or hardware behavior changed by this cleanup.
+
+- Follow-up: the concurrently edited cockpit component was populated during
+  verification. Reran `npm run typecheck`: PASS. `npm run build`: PASS
+  (production compilation and static generation). The earlier empty-file
+  blocker is resolved; no existing UI edits were changed by this cleanup.
+
+- Backend final result: 78 tests run in 133.340 s, OK (2 opt-in remote
+  tests skipped). Same-host resume loss difference 0.0 and final weights
+  equal; this does not establish new cross-device or hardware evidence.

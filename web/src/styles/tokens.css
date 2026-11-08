@@ -1,38 +1,35 @@
 @layer tokens {
   :root {
-    color-scheme: dark;
-    --bg-0: #060b16;
-    --bg-1: #0a1222;
-    --glass: rgba(22, 35, 61, 0.62);
-    --glass-raised: rgba(26, 42, 72, 0.96);
-    --hairline: rgba(160, 190, 230, 0.14);
-    --ctl-border: #62779c;
-    --ink: #eaf0fb;
-    --ink-2: #aebbd3;
-    --ink-3: #8a9ab6;
-    --teal: #5ff0d6;
-    --teal-dim: #35c3ad;
-    --amber: #ffb84d;
-    --red: #ff7c96;
-    --blue: #8db4ff;
-    --violet: #c7a8ff;
-    --on-fill: #04101c;
-    --paper: #eeebe3;
-    --paper-ink: #0b1426;
-    --paper-muted: #4a5568;
-    --r-panel: 22px;
-    --r-ctl: 12px;
-    --r-stage: 28px;
-    --gap-section: 96px;
+    color-scheme: light;
+    --red: #e63946;
+    --honey: #f1faee;
+    --frost: #a8dadc;
+    --steel: #457b9d;
+    --navy: #1d3557;
+    --ink: #1d3557;
+    --ink-2: #30485d;
+    --ink-3: #3b5367;
+    --bg-0: #f1faee;
+    --bg-1: #f1faee;
+    --glass: #f1faee;
+    --glass-raised: #f1faee;
+    --hairline: #1d35572b;
+    --ctl-border: #457b9d;
+    --teal: #1d3557;
+    --teal-dim: #457b9d;
+    --amber: #1d3557;
+    --blue: #1d3557;
+    --violet: #1d3557;
+    --on-fill: #f1faee;
+    --paper: #f1faee;
+    --paper-ink: #1d3557;
+    --paper-muted: #30485d;
+    --r-panel: 14px;
+    --r-ctl: 8px;
+    --r-stage: 14px;
     --pad-panel: 24px;
     --font-sans: var(--font-geist), system-ui, sans-serif;
     --font-serif: var(--font-instrument), Georgia, serif;
     --font-mono: var(--font-geist-mono), Consolas, monospace;
-  }
-  @media (max-width: 899px) {
-    :root {
-      --gap-section: 56px;
-      --pad-panel: 18px;
-    }
   }
 }
