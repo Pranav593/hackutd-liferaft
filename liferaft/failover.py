@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 from pydantic import Field
 
 from .artifacts import IntegrityError, LocalArtifactStore
-from .contracts import CheckpointManifest, Digest, Identifier, IncidentEvent, WireModel, WorkerHeartbeat, utc_now
+from .contracts import ButtonEvent, CheckpointManifest, Digest, Identifier, IncidentEvent, WireModel, WorkerHeartbeat, utc_now
 from .coordinator import LocalCoordinator
 
 HEARTBEAT_S = 2.0
@@ -102,10 +102,11 @@ class LocalFailover(LocalCoordinator):
     def _spec(job) -> JobSpec:
         return JobSpec.model_validate_json(job["spec"])
 
-    def _event(self, db, job, kind: str, *, worker=None, source="derived", event_id=None, **evidence):
+    def _event(self, db, job, kind: str, *, worker=None, source="derived", event_id=None,
+               trigger_event_id=None, **evidence):
         self.append(db, IncidentEvent(
             event_id=event_id or uuid4(), job_id=job["job_id"], incident_id=job["incident_id"],
-            created_utc=utc_now(), event_type=kind, source_type=source,
+            created_utc=utc_now(), event_type=kind, source_type=source, trigger_event_id=trigger_event_id,
             worker_id=worker if worker is not None else job["owner"], lease_epoch=job["epoch"],
             message=kind.replace("_", " ").capitalize(), evidence=evidence,
         ))
@@ -183,7 +184,7 @@ class LocalFailover(LocalCoordinator):
                 self._event(db, job, "PRIMARY_PAUSE_REQUESTED", step=request.step_completed)
             return self._plan(self._job(db, request.job_id), action, now)
 
-    def request_rescue(self, job_id: str, request_id: UUID) -> str:
+    def request_rescue(self, job_id: str, request_id: UUID, *, button: ButtonEvent | None = None) -> str:
         with self.transaction() as db:
             job = self._job(db, job_id)
             prior = db.execute("SELECT * FROM rescue_requests WHERE request_id=?",
@@ -199,16 +200,20 @@ class LocalFailover(LocalCoordinator):
                 raise ValueError("primary lease already expired")
             incident = f"inc-{uuid4().hex}"
             db.execute("INSERT INTO rescue_requests VALUES(?, ?, ?)", (str(request_id), job_id, incident))
+            evidence_job = {**dict(job), "incident_id": incident}
+            if button is not None:
+                self._event(db, evidence_job, "SENSOR_EVENT_RECEIVED", source="injected", event_id=request_id,
+                            **button.model_dump(mode="json"))
+            cause = {"event_id": request_id} if button is None else {"trigger_event_id": request_id}
             if not self._ready(db, job, now):
                 db.execute("UPDATE jobs SET block_reason='STANDBY_UNAVAILABLE' WHERE job_id=?", (job_id,))
-                evidence_job = {**dict(job), "incident_id": incident}
                 self._event(db, evidence_job, "STANDBY_UNAVAILABLE", source="injected",
-                            event_id=request_id, reason="cooling_drill")
+                            reason="cooling_drill", **cause)
                 return incident
             db.execute("""UPDATE jobs SET state='RESCUE_REQUESTED', incident_id=?, detected=?,
                           block_reason=NULL WHERE job_id=?""", (incident, now, job_id))
             self._event(db, self._job(db, job_id), "RESCUE_REQUESTED",
-                        source="injected", event_id=request_id, reason="cooling_drill")
+                        source="injected", reason="cooling_drill", **cause)
             return incident
 
     def _watchdog(self, db, job, now):

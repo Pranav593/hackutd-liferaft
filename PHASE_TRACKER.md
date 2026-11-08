@@ -63,6 +63,7 @@
 - [ ] OLED verified I2C voltage/address displays cloud-reported state.
 - [ ] DS18B20 pinout/resistor inspected; valid ambient measurement + invalid handling.
 - [ ] Python USB bridge forwards validated events via outbound HTTPS.
+- [x] One-shot button bridge and scoped coordinator action pass offline tests; live USB/Render acceptance remains open.
 - [ ] Relay disconnected; no fan/Pi power switching; no real overheating.
 - **Gate:** physical button causes real software rescue and OLED reflects confirmed state.
 
@@ -344,3 +345,11 @@
 - `campus-drill-03` finished `COMPLETED` with `laptop-standby` owning epoch 2 at step 200. The exported events record the injected rescue request, Mac checkpoint commit and graceful yield at step 48, matching SHA-256 through lease transfer, and measured Windows training at step 49. The Windows worker committed the final step-200 checkpoint and recorded `JOB_COMPLETED`.
 - Detection-to-first-resumed-step was 5.398 s, with zero steps lost at handoff. Independently recomputed all 70 hashes in `.liferaft/campus-drill-03.jsonl` and matched the complete event chain. `git diff --check` passed for this documentation-only update.
 - The two-laptop recovery gate is verified. Phase 3 remains in progress for its other unchecked security and live transaction checks.
+
+### 2026-11-08 UTC — Software gateway for the button drill
+
+- Added a one-shot, bounded USB bridge and an optional gateway-only HTTPS action. The coordinator rejects the action when drills are disabled, validates the typed ESP32 frame again, and links the injected sensor event to the existing rescue transaction. Repeated delivery of the same frame returns the same incident. The gateway cannot read job data, upload checkpoints, claim leases or call the operator rescue action.
+- `.venv/bin/python -m unittest discover -s tests -v` passed 28 tests in 44.804 s, with two live checks skipped. `.venv/bin/python -m compileall -q liferaft tests`, `git diff --check`, and `git check-ignore .env.gateway` passed.
+- `PYTHONPATH=tests .venv/bin/python -` exercised a synthetic serial frame through the bridge parser, WSGI API, disposable local persistence and real PyTorch workers. The primary yielded at step 15, the standby resumed at 16 under epoch 2, and the job completed step 30 with zero lost steps and a verified event chain. The serial input and cloud transport were simulated for this run.
+- Added opt-in hosted authorization and isolated Atlas rollback/immutability checks in `tests/test_cloud_live.py`. `LIFERAFT_TEST_HOSTED=1 .venv/bin/python -m unittest discover -s tests -p test_cloud_live.py -v` stopped at the coordinator preflight. The execution shell could not resolve the Render host. The isolated Atlas test was skipped because no test URI was configured. These live gates, signed transfers, and the physical button drill remain open.
+- Next step is gateway provisioning and deployment, then a real serial frame from Ved's button-only firmware and the Windows bridge command in `docs/PHASE_3_ATLAS_SETUP.md` §5. No hardware was accessed or changed.

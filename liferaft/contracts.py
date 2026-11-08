@@ -78,6 +78,28 @@ class WorkerHeartbeat(WireModel):
     checkpoint: WorkerCheckpoint
 
 
+class ButtonEvent(WireModel):
+    model_config = ConfigDict(strict=True)
+
+    protocol_version: Annotated[int, Field(ge=1, le=1)]
+    device_id: Literal["esp32-s3-01"]
+    seq: Annotated[int, Field(ge=0, le=0xFFFFFFFF)]
+    uptime_ms: Annotated[int, Field(ge=0, le=0xFFFFFFFF)]
+    ambient_temp_c: Annotated[float, Field(ge=-55, le=125)] | None
+    ambient_valid: bool
+    button_pressed: bool
+    event_type: Literal["COOLING_FAILURE_TEST"]
+    source_type: Literal["injected"]
+
+    @model_validator(mode="after")
+    def check_button(self):
+        if not self.button_pressed:
+            raise ValueError("button must be pressed")
+        if self.ambient_valid != (self.ambient_temp_c is not None):
+            raise ValueError("ambient temperature and validity must agree")
+        return self
+
+
 class CheckpointManifest(WireModel):
     schema_version: Literal[1] = 1
     checkpoint_id: Identifier

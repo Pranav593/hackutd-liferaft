@@ -124,3 +124,33 @@ Then run the drill.
    ```
 
 The event export should show `chain_valid: true`, an injected `RESCUE_REQUESTED`, and `FIRST_RESUMED_STEP_COMPLETED` with the same checkpoint SHA-256. Keep the terminal output from both laptops for the evidence record. If a worker exits or a drill is missed, stop the worker processes in their own terminals with Ctrl+C and retry with a fresh job ID. The offline fallback is `.venv/bin/python -m liferaft demo --scenario cooling-test`.
+
+## 5. First ESP32 button-triggered recovery
+
+1. On Laptop B, confirm the button-only firmware emits the documented [USB frame](../INTEGRATION_CONTRACTS.md#10-hardware-serial-contract). Close its serial monitor so the bridge can open the port. In **Device Manager → Ports (COM & LPT)**, note the Espressif port that appears when the board is connected.
+2. On Laptop B, from the repo in PowerShell, install pySerial and create an ignored `.env.gateway`. This command generates a new token in the file without printing it and refuses to overwrite an existing profile.
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m pip install pyserial==3.5
+   .\.venv\Scripts\python.exe -c "from pathlib import Path; import secrets; Path('.env.gateway').open('x').write('LIFERAFT_CLOUD_URL=https://liferaft-coordinator.onrender.com\nLIFERAFT_CLOUD_TOKEN=' + secrets.token_hex(32) + '\n')"
+   git check-ignore .env.gateway
+   ```
+
+3. On the [Render service](https://dashboard.render.com/), open **Environment → Environment Variables**. Add `LIFERAFT_GATEWAY_TOKEN` with the token value from Laptop B's `.env.gateway` and keep `LIFERAFT_ENABLE_DRILLS=1`. Use a password manager to transfer the token privately if the dashboard is on another laptop. Keep it out of screenshots, Git, and ESP32 firmware. Deploy the code that includes the gateway action. On Laptop B, run `.\.venv\Scripts\python.exe -m liferaft cloud --profile gateway doctor` and check for `role: gateway` and `database: true`.
+4. Start a fresh two-laptop job using §4. On Laptop B, open a second PowerShell and arm the bridge. Substitute the new job ID and the port from Device Manager. After `BUTTON_BRIDGE_ARMED` and the primary's first 20 steps, press the button once. The bridge listens for up to two minutes and exits after one valid press.
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m liferaft cloud --profile gateway bridge --job campus-button-01 --port COM8
+   ```
+
+5. Check the operator events for `SENSOR_EVENT_RECEIVED` with `source_type: injected`, then a `RESCUE_REQUESTED` whose `trigger_event_id` matches that sensor event. Let Windows finish and confirm `COMPLETED` at step 200. If the button is unavailable, use the operator `rescue` command for the software-only drill. If the bridge reports a USB or HTTP error, use operator status to establish whether a request arrived before rearming.
+
+## 6. Optional live cloud verification
+
+Run the hosted access checks on a laptop with its existing `.env.standby`. These probes use a fresh nonexistent job ID and expect the coordinator to reject an anonymous download and an authenticated worker impersonation.
+
+```sh
+LIFERAFT_TEST_HOSTED=1 .venv/bin/python -m unittest discover -s tests -p test_cloud_live.py -v
+```
+
+For the transaction check, use a **separate test Atlas deployment** with a user scoped to its `liferaft` database and a network allowlist for the test machine. Install `requirements-cloud.lock` in the test venv. Supply its connection URI through the private `LIFERAFT_ATLAS_TEST_URI` environment variable and run `.venv/bin/python -m unittest discover -s tests -p test_cloud_live.py -v`. The test inserts uniquely named fixtures, aborts a checkpoint transaction after the artifact insert, checks that neither state nor bytes changed, then tests a successful commit and overwrite rejection. Cleanup targets only that run's fixture IDs.
