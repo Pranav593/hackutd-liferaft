@@ -1,5 +1,6 @@
 """Offline HTTP and transport contract tests. No Atlas access is implied."""
 from base64 import b64encode
+from contextlib import redirect_stdout
 import hashlib
 import io
 import json
@@ -7,11 +8,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 from liferaft.cloud import CloudClient, CloudWorkerCoordinator
 from liferaft.cloud_api import PRIMARY, STANDBY, application
 from liferaft.artifacts import LocalArtifactStore
+from liferaft.cli import main
 from liferaft.contracts import CheckpointManifest, WorkerCheckpoint, WorkerHeartbeat, WorkerSystem, utc_now
 from liferaft.failover import JobSpec, LocalFailover
 
@@ -85,6 +88,18 @@ class CloudTests(unittest.TestCase):
             CloudClient("http://example.test", TOKENS["operator"])
         with self.assertRaises(ValueError):
             application(self.repository, {role: "a" * 64 for role in TOKENS})
+
+    def test_create_cli_persists_workload_fingerprint(self):
+        from liferaft.workload import CONFIG_FINGERPRINT
+
+        args = ["liferaft", "cloud", "--profile", "operator", "create", "--job", "test-job"]
+        profile = {"LIFERAFT_CLOUD_URL": "https://example.test", "LIFERAFT_CLOUD_TOKEN": TOKENS["operator"]}
+        with (patch("sys.argv", args), patch("liferaft.cloud.dotenv_values", return_value=profile),
+              patch.object(CloudClient, "call", side_effect=self.call), redirect_stdout(io.StringIO()) as output):
+            self.assertEqual(main(), 0, output.getvalue())
+
+        spec = self.call("spec", role="primary")
+        self.assertEqual(spec["config_fingerprint"], CONFIG_FINGERPRINT)
 
     def test_private_transfer_fencing_and_evidence(self):
         spec = JobSpec(job_id="test-job", run_id="test-run", primary=PRIMARY, seed=1729, target=20,

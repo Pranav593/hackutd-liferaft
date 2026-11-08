@@ -138,7 +138,7 @@ def run(args):
 
             spec = JobSpec(job_id=job, run_id=f"run-{uuid4().hex}", primary=PRIMARY, seed=1729,
                            target=200, checkpoint_every=10, model_version=MODEL_VERSION,
-                           dataset_fingerprint=make_dataset(1729)[2])
+                           dataset_fingerprint=make_dataset(1729)[2], config_fingerprint=CONFIG_FINGERPRINT)
             fields = spec.model_dump(mode="json")
         if action == "rescue":
             fields = {"request_id": str(uuid4())}
