@@ -75,12 +75,12 @@
 - [ ] Real RTO/RPO/continuity metrics, uncertainty properly represented.
 - **Gate:** risk tests plus 3 measured scenarios pass without unsafe actions.
 
-### Phase 7 — NVIDIA Nemotron tool agent — NOT_STARTED
-- [ ] Verified live model/API setup behind configured adapter.
-- [ ] Read-only typed diagnostic tool collection and bounded loop.
-- [ ] Real multi-tool calls, evidence IDs and structured answer.
-- [ ] Model cannot operate power, command line or leasing.
-- [ ] Mock tests and real provider smoke test when credentials exist.
+### Phase 7 — NVIDIA Nemotron tool agent — DONE (demo scope)
+- [x] Verified live model/API setup behind configured adapter.
+- [x] Read-only typed incident and recovery-verification tools with a bounded exchange.
+- [x] Real multi-tool calls, evidence IDs and structured answer.
+- [x] Model has no power, command line, or leasing tools.
+- [x] Mock tests and real provider smoke test when credentials exist.
 - **Gate:** actual provider trace from one incident; no fabricated results.
 
 ### Phase 8 — Photon two-way communication — NOT_STARTED
@@ -567,3 +567,15 @@
 - `campus-button-05` completed at step 200 with `laptop-standby` owning epoch 2. The operator and standby ran on separate laptops. The saved journal links the physical ESP32 event labeled `injected` to `RESCUE_REQUESTED` for the same incident.
 - The Mac committed checkpoint step 25 and yielded. The standby received the matching SHA-256 checkpoint and ran measured step 26. Detection to the first resumed step was 6.534 s, with zero steps lost at the handoff. `JOB_COMPLETED` confirms the standby finished step 200.
 - Independently recomputed and verified all 79 hashes in `.liferaft/campus-button-05.jsonl`. Phase 5's button-to-recovery milestone is complete. The OLED and ambient temperature sensor remain separate open items.
+
+### 2026-11-08 UTC — Nemotron incident investigation implemented
+
+- Added `liferaft investigate`, a hosted NVIDIA client, and typed read-only `get_incident` and `get_rescue_verification` tools. The command verifies the saved event chain before the three-request exchange and validates the report and its citations. It emits the tool trace alongside the model's interpretation.
+- Loaded the actual `campus-button-05` export and verified that the projected tools expose the injected button event, lease transfer, measured resume, and completion. The provider exchange was tested with a mock HTTP response. `.venv/bin/python -m unittest discover -s tests -v` ran 33 tests in 48.403 s, with 31 passing and two opt-in cloud checks skipped. Compilation and `git diff --check` passed.
+- The live run from this checkout stopped at the missing `NVIDIA_API_KEY` check. An unauthenticated NVIDIA endpoint probe timed out from the execution shell. Live verification remains open. On the dashboard Mac, configure the key in the ignored `.env` and run `.venv/bin/python -m liferaft investigate --job campus-button-05` from the repository root.
+- Pranav's Mac is the dashboard station. Ved's Windows laptop is the Raspberry Pi connection point. The investigator reports worker identities from each job export, including older runs that used the Mac as a training worker.
+
+### 2026-11-08 UTC — Live Nemotron investigation passed
+
+- Pranav ran `.venv/bin/python -m liferaft investigate --job campus-button-05` on the dashboard Mac with an NVIDIA Build key. The supplied terminal output shows `NEMOTRON_INVESTIGATION` from `nvidia/nemotron-3.5-lightning-30b-a3b` with both read-only tool calls and a structured report. Independently matched all eight cited event IDs against the saved verified event export.
+- The report traces the injected button drill, checkpoint step 25, lease transfer to epoch 2, measured resume at step 26, and completion at step 200. The tool evidence records 6.534 s recovery time and zero steps lost. The dashboard integration and additional diagnostic tools are outside the demonstrated CLI scope.

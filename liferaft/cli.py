@@ -1,7 +1,7 @@
 """Command-line entry points."""
 import argparse
 
-from . import cloud, doctor, scenario
+from . import cloud, doctor, nemotron, scenario
 from .config import load_environment
 from .training_cli import install_commands
 
@@ -22,5 +22,6 @@ def main() -> int:
     install_commands(subcommands)
     scenario.install_commands(subcommands)
     cloud.install_commands(subcommands)
+    nemotron.install_commands(subcommands)
     args = parser.parse_args()
     return args.handler(args)

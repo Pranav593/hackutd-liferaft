@@ -65,3 +65,18 @@ Success prints `LOCAL_RECOVERY_VERIFIED` with `owner: local-standby`, `epoch: 2`
 ## Hosted recovery across two laptops
 
 See the [Phase 3 Atlas and Render setup guide](docs/PHASE_3_ATLAS_SETUP.md) for the cloud deployment and recovery drill. Live verification status is in the phase tracker.
+
+## Investigate a rescue with NVIDIA Nemotron
+
+Run the investigation from the dashboard station, Pranav's Mac. Ved's Windows laptop is the Raspberry Pi connection point. The investigator reads the job export, which identifies the workers that actually ran that job.
+
+1. In the repo root on the Mac, add `NVIDIA_API_KEY=<your NVIDIA Build API key>` to the ignored `.env` file. `git check-ignore .env` should print `.env`. Keep the key in the local environment and out of Git and browser code. `NVIDIA_MODEL_ID` is optional and defaults to `nvidia/nemotron-3.5-lightning-30b-a3b`.
+2. From the repo root, run the command below. If the file for this job is missing, run the preceding export command first. For a fresh drill, replace the job ID in both commands with the new ID.
+
+   ```sh
+   mkdir -p .liferaft
+   .venv/bin/python -m liferaft cloud --profile operator events --job campus-button-05 > .liferaft/campus-button-05.jsonl
+   .venv/bin/python -m liferaft investigate --job campus-button-05
+   ```
+
+Success prints `NEMOTRON_INVESTIGATION` with `source_type: provider`, a structured report, and the two tool results with event IDs. The `investigate` command verifies the export's hash chain, sends allowlisted incident fields to NVIDIA Build, and uses the resulting report as advisory output. If the provider fails, use the original coordinator export for the demo evidence. A failed request produces `NEMOTRON_INVESTIGATION_FAILED` with a redacted reason and exits 2.
