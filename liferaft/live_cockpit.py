@@ -3,6 +3,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
+import secrets
 import subprocess
 import sys
 import time
@@ -87,7 +88,8 @@ def snapshot(client, historical=None):
 
 
 def start(client):
-    job = f"pi-live-{uuid4().hex[:12]}"
+    # The trailing three digits are the training number shown on the ESP32 OLED.
+    job = f"pi-live-{uuid4().hex[:8]}-{secrets.randbelow(1000):03d}"
     spec = demo_job_spec(job, PI_PRIMARY)
     try:
         result = client.call("demo_start", job, **spec.model_dump(mode="json"))

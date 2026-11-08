@@ -37,11 +37,28 @@ class FrameReader:
         return None
 
 
-def wait_for_button(connection, deadline):
+def training_number(job):
+    # Show the job's numeric suffix; never invent a training number.
+    suffix = re.search(r"(?:^|[^0-9])([0-9]{1,3})$", job)
+    return suffix.group(1).zfill(3) if suffix else "---"
+
+
+def send_display(connection, job, state):
+    for frame in ({"type": "DISPLAY_TRAINING", "id": training_number(job)},
+                  {"type": "DISPLAY_STATUS", "state": state}):
+        connection.write((json.dumps(frame, separators=(",", ":")) + "\n").encode())
+
+
+def wait_for_button(connection, deadline, job=None, *, clock=time.monotonic):
     reader = FrameReader()
-    while time.monotonic() < deadline:
+    next_display = clock()
+    while clock() < deadline:
+        if job is not None and clock() >= next_display:
+            # Keep the OLED fresh while armed; the firmware blanks it after 7 s of silence.
+            next_display = clock() + 2
+            send_display(connection, job, "READY")
         button = reader.read(connection, (ButtonEvent,))
-        if button is not None and time.monotonic() < deadline:
+        if button is not None and clock() < deadline:
             return button
     raise TimeoutError("bridge disarmed without a valid button frame")
 
@@ -137,7 +154,8 @@ def run_bridge(client, job, port, *, continuous=False, on_armed=None):
         if continuous:
             monitor(client, job, connection)
             return
-        button = wait_for_button(connection, time.monotonic() + ARM_SECONDS)
+        button = wait_for_button(connection, time.monotonic() + ARM_SECONDS, job)
+        send_display(connection, job, "TEST")
     except SerialException:
         raise RuntimeError("ESP32 USB serial connection unavailable; restart to re-arm") from None
     finally:
