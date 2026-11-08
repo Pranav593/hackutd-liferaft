@@ -150,14 +150,14 @@
 - [ ] Repeat a live NVIDIA call with the extended tool set.
 - **Gate:** actual provider trace from one incident; no fabricated results.
 
-### Phase 8 — Photon two-way communication — IN_PROGRESS (live STATUS and ACK verified)
+### Phase 8 — Photon two-way communication — DONE (verified demo scope)
 - [x] Photon 2.0 iMessage project-scoped send, signed webhook, durable bounded outbox, and dedupe exercised with fixtures.
 - [x] `STATUS/WHY/CHECKPOINT/ACK/HELP`, incident-scoped Nemotron advisory handoff, and replay receipt display.
 - [x] The queue reads recovery evidence independently and never runs provider calls in lease transactions.
 - [x] Provision a real project, key, direct space and signed webhook. Confirm the signed event reaches the deployed coordinator.
 - [x] Observe the reply to an inbound `STATUS` in the operator's iMessage conversation and its signed delivery callback.
 - [x] Observe the live signed `ACK` and verify one matching incident-bound journal event.
-- [ ] Observe an automatic outbound drill notification on a fresh drill.
+- [x] Observe automatic outbound drill and recovery notifications on a fresh drill, with signed delivery receipts and no inbound command.
 - **Gate:** real phone/provider round trip correlated to incident.
 
 ### Phase 9 — Real-data operations cockpit — IN_PROGRESS (saved evidence replay)
@@ -1342,3 +1342,18 @@
 - Browser, physical hardware and remote provider checks were not run for this
   removal-only UI cleanup. No human action required. Next action: browser QA
   alongside completion of the ongoing dashboard/topology work.
+
+### 2026-11-08 — Automatic Photon notification verified
+
+- Ran `bash /tmp/liferaft-photon-smoke.7Z5tL3/notify.sh` on the operator Mac
+  against the hosted coordinator with job `photon-notify-01`. The script
+  reported verified automatic delivery.
+- Independently read the saved complete, chain-valid event export. The injected
+  drill began at 14:19:20 UTC. The signed delivery for the first alert was
+  recorded at 14:19:22 UTC. The standby first resumed at step 15, the second
+  signed delivery was recorded at 14:19:25 UTC, and the job completed at step 200.
+  No inbound Photon command was recorded in this job.
+- This run used two local worker processes and a software drill trigger. The
+  physical ESP32 and separate-laptop handoff remain backed by the distinct
+  `campus-button-05` run. A new live show requires a fresh job ID and matching
+  Photon scope in Render.
