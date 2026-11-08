@@ -43,7 +43,6 @@ const subscribe = (fn: () => void) => {
     listeners.delete(fn);
   };
 };
-export const getState = () => state;
 export function update(patch: Partial<State>) {
   state = { ...state, ...patch };
   listeners.forEach((fn) => fn());

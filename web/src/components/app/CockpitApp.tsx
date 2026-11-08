@@ -6,7 +6,6 @@ import {
   update,
   step,
   setCursor,
-  getState,
   syncUrl,
 } from "../../lib/store/cockpit-store";
 import { milestones } from "../../lib/derive/timeline";

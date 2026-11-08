@@ -1209,3 +1209,26 @@
   bento-desktop-final.png, bento-detail-final.png, bento-*.png and bento-handoff.pdf.
 - User requested stopping at a complete UI while content arrangement is decided.
   No extra functionality or physical/provider/deployment work is required here.
+
+### 2026-11-08 — Additional unused UI cleanup
+
+- Traced relative imports from Next.js entry points and checked repository
+  references before removing three components unreachable from the dashboard:
+  `components/recorder/Inspector.tsx`, `components/rescue/RescueHeadline.tsx`,
+  and `components/scrubber/ReplayScrubber.tsx` under `web/src/`.
+  Dashboard detail dialogs and its replay transport provide the active views.
+- Removed unused `Empty`/`Skeleton` primitives and the unused `getState`
+  import/export. Retained the narrative derivation helper and its regression
+  tests. No backend, hardware, safety, recovery or provenance behavior changed.
+- Commands actually run: `npm run typecheck` PASS;
+  `npm run test:contracts` PASS; `npm test` PASS (18 tests in 3 files);
+  `npm run build` PASS (production compilation and static generation).
+- Additional diagnostic: `npm exec -- tsc --noEmit -p web/tsconfig.json
+  --noUnusedLocals --noUnusedParameters` initially identified unused imports
+  in removed/cleaned components and `configureBloom` in the independently
+  edited topology engine. Left the topology work untouched.
+- Reviewed remaining changed React components: clipboard state and hook order
+  retained, no new effects/listeners or dependencies, active dialogs preserved.
+- Browser, physical hardware and remote provider checks were not run for this
+  removal-only UI cleanup. No human action required. Next action: browser QA
+  alongside completion of the ongoing dashboard/topology work.
