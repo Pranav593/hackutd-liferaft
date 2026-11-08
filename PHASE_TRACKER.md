@@ -767,3 +767,20 @@
   verified; no production events changed.
 - Hash verification is tamper detection, not remote attestation. Hosted paged
   endpoint NOT_RUN; next: shared evidence loader and deterministic handoff brief.
+
+### 2026-11-08 — Autonomous software update 8 — Verified recovery evidence brief
+
+- Added `liferaft evidence --job JOB --events FILE [--output NEW_JSON]` with
+  atomic no-overwrite output. Derives continuity only from matching committed
+  hash/step/producer, increasing ownership epoch and measured K+1 loss. Rejects
+  simulated or inconsistent recovery proof; requires matching completion owner.
+- RPO is unknown without a primary yield record; recorded RTO is labeled derived.
+  Report explicitly says device identity is not attested and bytes are not
+  independently rehashed here. Allowlisted fields omit private journal free text.
+- Nemotron now shares the stricter journal loader, including anchored truncation
+  detection. Legacy saved exports remain readable with unanchored completeness.
+- Files: evidence.py, cli.py, nemotron.py, test_evidence.py.
+- Ran `.venv` Python `-m unittest discover -s tests -p test_evidence.py -v`:
+  3/3 in 0.199 s; test_nemotron.py: 2/2 in 0.128 s; `git diff --check` passed.
+- Tests use synthetic journals, not new live rescue evidence. No provider calls,
+  hardware or cloud mutations. Next: read-only cloud readiness diagnostics.

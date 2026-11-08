@@ -1,5 +1,4 @@
 """Read-only Nemotron investigation of a verified coordinator event export."""
-from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -14,11 +13,10 @@ from pydantic import Field, TypeAdapter
 from .cloud import NoRedirect
 from .config import log, redact, state_dir
 from .contracts import Identifier, IncidentEvent, WireModel
-from .coordinator import GENESIS, canonical
+from .evidence import load_export
 
 DEFAULT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
-MAX_EXPORT_BYTES = 2 * 1024 * 1024
 MAX_RESPONSE_BYTES = 128 * 1024
 
 # Only share structured operational fields with NVIDIA. Free-form journal
@@ -71,32 +69,10 @@ class InvestigationReport(WireModel):
 
 
 def load_events(path: Path, job_id: str) -> list[IncidentEvent]:
-    with path.open("rb") as stream:
-        raw = stream.read(MAX_EXPORT_BYTES + 1)
-    if len(raw) > MAX_EXPORT_BYTES:
-        raise ValueError("event export exceeds the size limit")
-    try:
-        export = json.loads(raw)
-        result = export["result"]
-        events = result["events"]
-        if (export["event_type"] != "CLOUD_EVENTS" or export["job_id"] != job_id
-                or result["chain_valid"] is not True or not isinstance(events, list) or not events):
-            raise ValueError
-        parsed = []
-        previous = GENESIS
-        for seq, entry in enumerate(events, start=1):
-            body = {key: value for key, value in entry.items() if key not in ("seq", "prev_hash", "event_hash")}
-            digest = sha256(f"{previous}\n{canonical(body)}".encode()).hexdigest()
-            if entry["seq"] != seq or entry["prev_hash"] != previous or entry["event_hash"] != digest:
-                raise ValueError
-            event = IncidentEvent.model_validate(body)
-            if event.job_id != job_id:
-                raise ValueError
-            parsed.append(event)
-            previous = digest
-    except (AttributeError, KeyError, TypeError, ValueError):
-        raise ValueError("expected a valid hash-chained CLOUD_EVENTS export for this job") from None
-    return parsed
+    events, _ = load_export(path, job_id)
+    if not events:
+        raise ValueError("event export is empty")
+    return events
 
 
 def tool_events(events, incident_id, name):
