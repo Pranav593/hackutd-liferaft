@@ -721,3 +721,17 @@
 - Binary HTTP tested with offline policy and transport doubles; no new physical
   cross-device/live signed-transfer evidence claimed. Next: protocol documentation
   and bounded retries that preserve uncertain ownership outcomes.
+
+### 2026-11-08 — Autonomous software update 5 — Phase 3 bounded transport retries
+
+- Added at most three attempts with exponential jitter and a six-second request
+  budget for read/idempotent actions and immutable binary transfers. Reuse the
+  exact request and heartbeat/request IDs. No retry for start/claim/yield/resumed/
+  complete/create when outcome is uncertain; worker fails closed.
+- Retry only network failures and 429/502/503/504; permanent auth/validation errors
+  stop immediately. Cap responses and hide private network/provider details.
+- Files: cloud.py, test_cloud_transport.py. Ran `.venv` Python with
+  `-m unittest discover -s tests -p 'test_cloud*.py' -v`: 18 tests in 2.608 s,
+  16 passed, 2 live checks skipped. `git diff --check` passed.
+- Faults are test-injected transport errors; no actual cloud outage induced.
+  Next: stronger persistence fault coverage and isolated live test fixtures.

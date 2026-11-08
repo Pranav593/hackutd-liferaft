@@ -2,7 +2,8 @@
 import io
 import json
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+from urllib.error import HTTPError, URLError
 
 from liferaft.artifacts import IntegrityError
 from liferaft.cloud import CloudClient
@@ -47,3 +48,43 @@ class TransportTests(unittest.TestCase):
             self.assertEqual(self.client.supports_signed_transfers(), expected)
             self.assertEqual(self.client.supports_signed_transfers(), expected)
             self.client.call.assert_called_once_with("doctor")
+
+    @patch("liferaft.cloud.time.sleep")
+    def test_transient_read_retries_are_bounded(self, sleep):
+        self.client.opener.open.side_effect = [
+            HTTPError("https://private.test/?ticket=secret", 503, "unavailable", {}, io.BytesIO(b"secret")),
+            URLError("secret network detail"), io.BytesIO(b'{"result":{"auth":true}}')]
+        self.assertEqual(self.client.call("doctor"), {"auth": True})
+        self.assertEqual(self.client.opener.open.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+        requests = [call.args[0] for call in self.client.opener.open.call_args_list]
+        self.assertIs(requests[0], requests[2])
+        self.assertTrue(all(call.kwargs["timeout"] <= 2 for call in self.client.opener.open.call_args_list))
+
+    @patch("liferaft.cloud.time.sleep")
+    def test_ownership_mutations_and_permanent_errors_never_retry(self, sleep):
+        for action in ("start", "claim", "yield", "resumed", "complete", "create"):
+            self.client.opener.open.reset_mock()
+            self.client.opener.open.side_effect = URLError("private connection details")
+            with self.subTest(action=action), self.assertRaisesRegex(RuntimeError, "unavailable") as caught:
+                self.client.call(action, "job")
+            self.assertNotIn("private", str(caught.exception))
+            self.client.opener.open.assert_called_once()
+        self.client.opener.open.reset_mock()
+        self.client.opener.open.side_effect = HTTPError("private", 403, "secret", {}, io.BytesIO(b"secret"))
+        with self.assertRaisesRegex(RuntimeError, "HTTP 403"):
+            self.client.call("doctor")
+        self.client.opener.open.assert_called_once()
+        sleep.assert_not_called()
+
+    @patch("liferaft.cloud.time.sleep")
+    def test_exhaustion_and_invalid_responses_fail_closed(self, sleep):
+        self.client.opener.open.side_effect = URLError("private")
+        with self.assertRaises(RuntimeError):
+            self.client.call("doctor")
+        self.assertEqual(self.client.opener.open.call_count, 3)
+        self.client.opener.open.side_effect = None
+        for raw in (b"null", b"[]", b"{}", b"not-json"):
+            self.client.opener.open.return_value = io.BytesIO(raw)
+            with self.subTest(raw=raw), self.assertRaisesRegex(RuntimeError, "invalid coordinator response"):
+                self.client.call("doctor")

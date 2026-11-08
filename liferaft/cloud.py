@@ -3,6 +3,7 @@ from base64 import b64decode, b64encode
 import json
 import os
 import re
+import random
 from pathlib import Path
 import tempfile
 import time
@@ -19,6 +20,10 @@ from .cloud_api import DEVICE_IDS, MAX_BODY, PRIMARY, TOKEN_PATTERN
 from .config import log, state_dir
 from .contracts import MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier
 from .failover import JobPlan, JobSpec
+
+RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
+RETRY_SAFE_ACTIONS = frozenset({"doctor", "spec", "status", "events", "register", "candidates",
+                                "heartbeat", "commit", "rescue", "button", "upload_url", "download_url"})
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -45,6 +50,38 @@ class CloudClient:
             self._signed_transfers = self.call("doctor").get("checkpoint_transfer") == "signed-v1"
         return self._signed_transfers
 
+    def _exchange(self, request, *, label, limit, retry_safe):
+        """One six-second budget; never retry an ambiguous ownership mutation."""
+        deadline = time.monotonic() + 6
+        last_status = None
+        for attempt in range(3 if retry_safe else 1):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                with self.opener.open(request, timeout=min(2.0, remaining)) as response:
+                    raw = response.read(limit + 1)
+                    if len(raw) > limit:
+                        raise ValueError("response size cap")
+                    return raw
+            except HTTPError as error:
+                last_status = error.code
+                error.close()
+                if error.code not in RETRYABLE_STATUS:
+                    break
+            except (URLError, OSError):
+                last_status = None
+            except ValueError:
+                raise RuntimeError(f"invalid coordinator response during {label}") from None
+            if not retry_safe or attempt == 2:
+                break
+            delay = min(random.uniform(0.1, 0.2) * 2**attempt, max(0, deadline - time.monotonic()))
+            if delay:
+                time.sleep(delay)
+        if last_status is not None:
+            raise RuntimeError(f"coordinator rejected {label} (HTTP {last_status})") from None
+        raise RuntimeError(f"coordinator unavailable during {label}") from None
+
     def transfer(self, signed_url, method, *, data=None, limit=MAX_CHECKPOINT_BYTES):
         # A compromised response must not exfiltrate a worker token to another
         # host, scheme, route or redirect. Accept only our exact relative route.
@@ -54,17 +91,7 @@ class CloudClient:
         request = Request(self.origin + signed_url, data=data, method=method, headers={
             "Content-Type": "application/octet-stream", "Authorization": f"Bearer {self.token}",
         })
-        try:
-            with self.opener.open(request, timeout=6) as response:
-                raw = response.read(limit + 1)
-                if len(raw) > limit:
-                    raise ValueError("transfer response exceeds size cap")
-                return raw
-        except HTTPError as error:
-            error.close()
-            raise RuntimeError(f"coordinator rejected checkpoint transfer (HTTP {error.code})") from None
-        except (URLError, OSError, ValueError):
-            raise RuntimeError("coordinator unavailable during checkpoint transfer") from None
+        return self._exchange(request, label="checkpoint transfer", limit=limit, retry_safe=True)
 
     def upload_checkpoint(self, manifest, data):
         verify_data(data, manifest)
@@ -86,14 +113,11 @@ class CloudClient:
         request = Request(self.endpoint, data=body, headers={
             "Content-Type": "application/json", "Authorization": f"Bearer {self.token}",
         })
+        raw = self._exchange(request, label=action, limit=MAX_BODY, retry_safe=action in RETRY_SAFE_ACTIONS)
         try:
-            with self.opener.open(request, timeout=6) as response:
-                return json.loads(response.read(MAX_BODY + 1))["result"]
-        except HTTPError as error:
-            error.close()
-            raise RuntimeError(f"coordinator rejected {action} (HTTP {error.code})") from None
-        except (URLError, OSError, KeyError, ValueError):
-            raise RuntimeError(f"coordinator unavailable during {action}") from None
+            return json.loads(raw)["result"]
+        except (KeyError, TypeError, ValueError):
+            raise RuntimeError(f"invalid coordinator response during {action}") from None
 
 
 class CloudWorkerCoordinator:
