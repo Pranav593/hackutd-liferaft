@@ -25,12 +25,13 @@ REQUIRED_ROLES = WORKERS | {"operator"}
 TOKEN_PATTERN = re.compile(r"[a-f0-9]{64}")
 LOGGER = logging.getLogger(__name__)
 MAX_BODY = ((MAX_CHECKPOINT_BYTES + 2) // 3) * 4 + 8192
+MAX_CONTROL_BODY = 16 * 1024
 
 
 class Request(WireModel):
-    action: str = Field(max_length=32)
+    action: str = Field(pattern=r"^[a-z_]{1,32}$")
     job: Identifier | None = None
-    sent_at: float
+    sent_at: float = Field(strict=True)
     args: dict = Field(default_factory=dict)
 
 
@@ -50,6 +51,16 @@ class APIError(Exception):
     def __init__(self, status, code):
         self.status = status
         self.code = code
+
+
+def unique_keys(pairs):
+    """Reject ambiguous JSON rather than letting different parsers pick a value."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
 
 
 def application(repository, credentials, *, drills=False):
@@ -188,7 +199,11 @@ def application(repository, credentials, *, drills=False):
                 if not 0 < length <= MAX_BODY:
                     raise APIError("413 Payload Too Large", "BODY_SIZE")
                 raw = environ["wsgi.input"].read(length)
-                request = Request.model_validate_json(raw)
+                if len(raw) != length:
+                    raise APIError("400 Bad Request", "INCOMPLETE_BODY")
+                request = Request.model_validate(json.loads(raw, object_pairs_hook=unique_keys))
+                if request.action != "commit" and length > MAX_CONTROL_BODY:
+                    raise APIError("413 Payload Too Large", "CONTROL_BODY_SIZE")
                 if abs(time.time() - request.sent_at) > 30:
                     raise APIError("409 Conflict", "STALE_REQUEST")
                 payload = {"result": dispatch(role, request)}

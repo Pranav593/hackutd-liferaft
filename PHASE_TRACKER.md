@@ -672,3 +672,12 @@
   runtime artifacts or unresolved merge markers in the six changed files.
 - No new live cloud, Pi or hardware action was performed during synchronization.
   Combined button/OLED and live display status remain outstanding integration.
+
+### 2026-11-08 — Autonomous software update 1 — Phase 3 HTTP boundaries
+
+- Reject duplicate JSON keys, nonnumeric/nonfinite timestamps, truncated bodies,
+  invalid action names and oversized non-transfer requests before policy dispatch.
+- Files: liferaft/cloud_api.py, tests/test_cloud_boundaries.py.
+- Ran `.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_cloud_boundaries.py -v`: 2/2 passed; `git diff --check` passed.
+- No live service or hardware action. Hosted/Atlas checks remain opt-in; no human
+  action requested in this software-only session. Next: expiring private transfers.
