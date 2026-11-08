@@ -258,7 +258,9 @@ export function derive(events: Ev[], cursor: number, scenario: string): Derived 
 
   let phase: Derived["phase"] = { headline: "Waiting for a job", sub: "Nothing is running yet.", tone: "idle" };
   if (completed)
-    phase = { headline: "Job finished. Nothing was lost.", sub: `Training reached its target on ${owner}.`, tone: "ok" };
+    phase = handedOff
+      ? { headline: "Job finished. Nothing was lost.", sub: `Training reached its target on ${owner} after a rescue.`, tone: "ok" }
+      : { headline: "Job finished. No rescue was needed.", sub: `Training reached its target on ${owner} without any handoff.`, tone: "ok" };
   else if (resumed)
     phase = { headline: `Back in business on ${owner}`, sub: "Training continues from the exact point it stopped.", tone: "ok" };
   else if (handedOff)
