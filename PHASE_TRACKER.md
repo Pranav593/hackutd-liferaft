@@ -1558,3 +1558,46 @@
   physical ESP32 and separate-laptop handoff remain backed by the distinct
   `campus-button-05` run. A new live show requires a fresh job ID and matching
   Photon scope in Render.
+
+### 2026-11-08 — OLED typography update
+
+- Updated edge.cpp and oled_test.cpp: size-2 LIFERAFT / Training / ID: #xxx,
+  followed by size-1 cloud and safety status. Three large rows fit 128x64.
+- bridge.py supplies the actual job numeric suffix, padded to three digits;
+  absent/oversized suffix stays unknown. Strict bounded DISPLAY_TRAINING parser
+  accepts only three digits or ---. Fresh coordinator status permits Linked;
+  seven-second timeout shows Offline and hides stale training number.
+- Updated OLED_SETUP.md and serial-monitor test; recovery authority unchanged.
+- Commands actually run (PowerShell, repository root):
+  `$env:PLATFORMIO_CORE_DIR=Join-Path (Get-Location) '.liferaft/pio'`;
+  `.\.liferaft\hardware-tools\Scripts\python.exe -m platformio run --project-dir hardware/esp32 --environment oled_test --environment edge`
+  PASS both environments (67.930s / 67.742s); edge RAM 24024B, flash 388318B.
+  `.\.venv\Scripts\python.exe -m pytest tests/test_edge_policy.py -q`
+  unavailable: pytest is not installed; used existing unittest suite instead.
+  `.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_edge_policy.py -v`
+  PASS 7 tests; after final bridge changes, `$env:PYTHONPATH='tests'` and
+  `.\.venv\Scripts\python.exe -m unittest test_edge_policy.EdgePolicyTests -v`
+  PASS 6 tests. `git diff --check` PASS.
+- `.\.venv\Scripts\python.exe -m serial.tools.list_ports -v`: Espressif COM8.
+  Read-only pyserial observation confirmed installed OLED_TEST_READY bench mode.
+  `.\.liferaft\hardware-tools\Scripts\python.exe -m platformio run --project-dir hardware/esp32 --environment oled_test --target upload --upload-port COM8`
+  PASS with written hashes verified. Post-upload serial read observed two
+  OLED_TEST_READY reports, address 60, cloud_connected=false.
+- No physical pixel visibility claimed. Installed standalone firmware correctly
+  shows unknown training / Offline; live edge firmware compiled, not uploaded.
+  No cloud link or real training ID was available from this standalone device.
+  Remaining gate: physical visual inspection and separately configured live
+  bridge/edge integration. No wiring changes or secrets requested.
+
+### 2026-11-08 — Static OLED cloud label requested by operator
+
+- Removed LOCAL DISPLAY TEST from standalone OLED pixels and replaced the cloud
+  line with unconditional Cloud: Online, as explicitly requested. Title/training
+  typography retained. Updated OLED_SETUP.md to explain the static label.
+- Command: `$env:PLATFORMIO_CORE_DIR=Join-Path (Get-Location) '.liferaft/pio'`;
+  `.\.liferaft\hardware-tools\Scripts\python.exe -m platformio run --project-dir hardware/esp32 --environment oled_test --target upload --upload-port COM8`
+  PASS in 18.047 seconds, written hashes verified. Post-upload bounded pyserial
+  read observed two OLED_TEST_READY reports at I2C address 60.
+- The label is presentation text only: serial truth remains cloud_connected=false.
+  No cloud connectivity, training number or physical pixel visibility claimed.
+  No wiring/human actions required; visual inspection remains unobserved.
