@@ -694,3 +694,16 @@
   200-step training resume starts at 121, maximum loss difference 0.0.
 - Capability module is not yet wired to HTTP. Live Atlas and new distributed
   transfers are NOT_RUN. Hardware untouched. Next: atomic binary transfer API.
+
+### 2026-11-08 — Autonomous software update 3 — Phase 3 binary transfer API
+
+- Added authenticated upload_url/download_url control actions and raw PUT/GET
+  /v1/checkpoint with expiring HMAC capabilities. Each use rechecks current
+  policy, epoch, readiness, exact size/hash and immutable transactional commit.
+- Files: cloud_api.py, failover.py, test_cloud.py. Legacy scoped transfer actions
+  remain compatible. No Atlas credentials or alternate storage service added.
+- `.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_cloud.py -v`:
+  8/8 passed in 2.489 s, including wrong-role/method, corrupt/truncated upload,
+  immutable retry, successful roundtrip and post-transfer stale URL denial.
+- No live deployment/Atlas/hardware run; Phase 3 stays IN_PROGRESS. Next: use
+  binary transport in workers, with same-origin URL validation and size caps.

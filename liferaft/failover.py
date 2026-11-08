@@ -290,6 +290,20 @@ class LocalFailover(LocalCoordinator):
                         step=manifest.step_completed, sha256=manifest.sha256)
             return True
 
+    def can_upload_checkpoint(self, manifest: CheckpointManifest) -> bool:
+        """Preflight only. Commit must recheck ownership after bytes arrive."""
+        with self.transaction() as db:
+            job = self._job(db, manifest.job_id)
+            spec = self._spec(job)
+            now = self.clock()
+            return (self._owns(job, manifest.worker_id, manifest.lease_epoch, now)
+                    and manifest.run_id == spec.run_id and manifest.model_version == spec.model_version
+                    and manifest.dataset_fingerprint == spec.dataset_fingerprint
+                    and manifest.config_fingerprint == spec.config_fingerprint
+                    and job["last_step"] <= manifest.step_completed <= spec.target
+                    and manifest.status == "VERIFIED"
+                    and abs(now - manifest.created_utc.timestamp()) <= 60)
+
     def yield_or_pause(self, job_id: str, worker_id: str, epoch: int, checkpoint_id: str) -> bool:
         with self.transaction() as db:
             job = self._job(db, job_id)

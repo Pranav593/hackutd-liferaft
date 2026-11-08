@@ -10,6 +10,7 @@ import time
 import unittest
 from unittest.mock import patch
 from uuid import uuid4
+from urllib.parse import urlsplit
 
 from liferaft.cloud import CloudClient, CloudWorkerCoordinator
 from liferaft.cloud_api import PRIMARY, STANDBY, application
@@ -68,6 +69,48 @@ class CloudTests(unittest.TestCase):
         code, body = self.request(action, job, role=role, **fields)
         self.assertEqual(code, 200, body)
         return body["result"]
+
+    def transfer(self, url, method, role="primary", data=b""):
+        parts = urlsplit(url)
+        captured = []
+        result = self.app({"REQUEST_METHOD": method, "PATH_INFO": parts.path, "QUERY_STRING": parts.query,
+                           "HTTP_AUTHORIZATION": f"Bearer {TOKENS.get(role, 'unknown')}",
+                           "CONTENT_LENGTH": str(len(data)), "wsgi.input": io.BytesIO(data)},
+                          lambda status, headers: captured.append(int(status.split()[0])))
+        return captured[0], b"".join(result)
+
+    def test_signed_transfer_roundtrip_revalidates_policy(self):
+        from test_transfers import fixture_manifest
+
+        manifest, data = fixture_manifest()
+        spec = JobSpec(job_id=manifest.job_id, run_id=manifest.run_id, primary=PRIMARY,
+                       seed=1729, target=20, checkpoint_every=10, model_version=manifest.model_version,
+                       dataset_fingerprint=manifest.dataset_fingerprint, config_fingerprint=manifest.config_fingerprint)
+        self.call("create", **spec.model_dump(mode="json"))
+        self.call("start", role="primary")
+        self.call("register", role="standby")
+        upload = self.call("upload_url", role="primary", manifest=manifest.model_dump(mode="json"))["signed_url"]
+        self.assertEqual(self.transfer(upload, "PUT", "unknown", data)[0], 401)
+        self.assertEqual(self.transfer(upload, "PUT", "standby", data)[0], 403)
+        self.assertEqual(self.transfer(upload, "GET", "primary")[0], 403)
+        self.assertEqual(self.transfer(upload, "PUT", data=data[:-1])[0], 413)
+        self.assertEqual(self.transfer(upload, "PUT", data=b"x" * len(data))[0], 422)
+        self.assertEqual(self.call("status")["last_step"], 0)
+        self.assertEqual(self.transfer(upload, "PUT", data=data)[0], 200)
+        self.assertEqual(self.transfer(upload, "PUT", data=data)[0], 200)  # immutable idempotent replay
+        self.call("rescue", request_id=str(uuid4()))
+        heartbeat = WorkerHeartbeat(request_id=uuid4(), job_id=spec.job_id, worker_id=PRIMARY, lease_epoch=1,
+                                    client_utc=utc_now(), step_completed=10, status="RUNNING",
+                                    system=WorkerSystem(os="test", arch="test"), checkpoint=WorkerCheckpoint())
+        self.call("heartbeat", role="primary", **heartbeat.model_dump(mode="json"))
+        self.call("yield", role="primary", epoch=1, checkpoint_id=manifest.checkpoint_id)
+        download = self.call("download_url", role="standby", epoch=1,
+                             checkpoint_id=manifest.checkpoint_id)["signed_url"]
+        self.assertEqual(self.transfer(download, "GET", "standby"), (200, data))
+        self.assertEqual(self.transfer(download + "x", "GET", "standby")[0], 403)
+        self.call("claim", role="standby", epoch=1, checkpoint_id=manifest.checkpoint_id)
+        self.assertEqual(self.transfer(download, "GET", "standby")[0], 403)
+        self.assertEqual(self.transfer(upload, "PUT", data=data)[0], 409)
 
     def test_public_health_supports_head_monitors(self):
         def check(method):

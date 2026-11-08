@@ -9,6 +9,7 @@ import re
 import time
 from threading import Lock
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
+from urllib.parse import parse_qs
 
 from pydantic import Field, TypeAdapter, ValidationError
 
@@ -16,6 +17,7 @@ from .artifacts import IntegrityError, verify_data
 from .atlas import AtlasRepository
 from .contracts import ButtonEvent, CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
 from .failover import JobSpec, JobPlan
+from .transfers import issue_ticket, verify_ticket
 
 PRIMARY = "laptop-primary"
 STANDBY = "laptop-standby"
@@ -130,6 +132,24 @@ def application(repository, credentials, *, drills=False):
             if (heartbeat.job_id, heartbeat.worker_id) != (job, worker):
                 raise APIError("403 Forbidden", "IDENTITY_DENIED")
             return repository.execute(job, lambda policy: policy.heartbeat(heartbeat))
+        if action == "upload_url" and set(args) == {"manifest"}:
+            manifest = CheckpointManifest.model_validate(args["manifest"])
+            if (manifest.job_id, manifest.worker_id) != (job, worker):
+                raise APIError("403 Forbidden", "IDENTITY_DENIED")
+            if not repository.execute(job, lambda policy: policy.can_upload_checkpoint(manifest)):
+                raise APIError("409 Conflict", "UPLOAD_NOT_ALLOWED")
+            return transfer_url(manifest, role, "PUT")
+        if action == "download_url":
+            allowed({"standby"})
+            ref = CheckpointRef.model_validate(args)
+
+            def offer(policy):
+                for manifest in policy.checkpoint_candidates(job, worker):
+                    if (manifest.checkpoint_id, manifest.lease_epoch) == (ref.checkpoint_id, ref.epoch):
+                        return manifest
+                raise APIError("403 Forbidden", "CHECKPOINT_NOT_OFFERED")
+
+            return transfer_url(repository.execute(job, offer), role, "GET")
         if action == "commit" and set(args) == {"manifest", "data"}:
             manifest = CheckpointManifest.model_validate(args["manifest"])
             if (manifest.job_id, manifest.worker_id) != (job, worker):
@@ -175,6 +195,54 @@ def application(repository, credentials, *, drills=False):
             return asdict(item)
         raise TypeError("invalid response object")
 
+    def transfer_url(manifest, role, method):
+        ticket = issue_ticket(manifest, role, method, credentials[role])
+        return {"signed_url": "/v1/checkpoint?ticket=" + ticket, "expires_in_s": 20}
+
+    def authenticate(environ):
+        bearer = environ.get("HTTP_AUTHORIZATION", "").removeprefix("Bearer ")
+        role = next((role for role, token in credentials.items()
+                     if TOKEN_PATTERN.fullmatch(bearer) and hmac.compare_digest(bearer, token)), None)
+        if role is None or not environ.get("HTTP_AUTHORIZATION", "").startswith("Bearer "):
+            raise APIError("401 Unauthorized", "AUTH_REQUIRED")
+        window = int(time.monotonic())
+        with rate_lock:
+            previous, count = windows.get(role, (window, 0))
+            count = count + 1 if previous == window else 1
+            if count > 20:
+                raise APIError("429 Too Many Requests", "RATE_LIMITED")
+            windows[role] = (window, count)
+        return role
+
+    def transfer(environ):
+        role = authenticate(environ)
+        query = parse_qs(environ.get("QUERY_STRING", ""), strict_parsing=True, max_num_fields=1)
+        if set(query) != {"ticket"} or len(query["ticket"]) != 1:
+            raise APIError("403 Forbidden", "INVALID_TRANSFER")
+        try:
+            manifest = verify_ticket(query["ticket"][0], role, environ["REQUEST_METHOD"], credentials[role])
+        except ValueError:
+            raise APIError("403 Forbidden", "INVALID_TRANSFER") from None
+        if environ["REQUEST_METHOD"] == "PUT":
+            if manifest.worker_id != DEVICE_IDS.get(role):
+                raise APIError("403 Forbidden", "IDENTITY_DENIED")
+            if int(environ.get("CONTENT_LENGTH") or 0) != manifest.size_bytes:
+                raise APIError("413 Payload Too Large", "CHECKPOINT_SIZE")
+            data = verify_data(environ["wsgi.input"].read(manifest.size_bytes), manifest)
+            accepted = repository.execute(manifest.job_id, lambda policy: policy.commit_checkpoint(manifest),
+                                          upload=(manifest, data))
+            if not accepted:
+                raise APIError("409 Conflict", "UPLOAD_NOT_ALLOWED")
+            return {"result": True}
+
+        def download(policy):
+            # Capability is not authority to bypass current policy or freshness.
+            if role == "standby" and manifest in policy.checkpoint_candidates(manifest.job_id, DEVICE_IDS[role]):
+                return policy.store.verified_bytes(manifest)
+            raise APIError("403 Forbidden", "CHECKPOINT_NOT_OFFERED")
+
+        return repository.execute(manifest.job_id, download)
+
     def handle(environ, start_response):
         request_id = uuid4().hex
         status = "200 OK"
@@ -182,19 +250,10 @@ def application(repository, credentials, *, drills=False):
             route = (environ["REQUEST_METHOD"], environ["PATH_INFO"])
             if route[0] in {"GET", "HEAD"} and route[1] == "/healthz":
                 payload = {"ready": True}
+            elif route[0] in {"GET", "PUT"} and route[1] == "/v1/checkpoint":
+                payload = transfer(environ)
             elif route == ("POST", "/v1/control"):
-                bearer = environ.get("HTTP_AUTHORIZATION", "").removeprefix("Bearer ")
-                role = next((role for role, token in credentials.items()
-                             if TOKEN_PATTERN.fullmatch(bearer) and hmac.compare_digest(bearer, token)), None)
-                if role is None or not environ.get("HTTP_AUTHORIZATION", "").startswith("Bearer "):
-                    raise APIError("401 Unauthorized", "AUTH_REQUIRED")
-                window = int(time.monotonic())
-                with rate_lock:
-                    previous, count = windows.get(role, (window, 0))
-                    count = count + 1 if previous == window else 1
-                    if count > 20:
-                        raise APIError("429 Too Many Requests", "RATE_LIMITED")
-                    windows[role] = (window, count)
+                role = authenticate(environ)
                 length = int(environ.get("CONTENT_LENGTH") or 0)
                 if not 0 < length <= MAX_BODY:
                     raise APIError("413 Payload Too Large", "BODY_SIZE")
@@ -209,7 +268,7 @@ def application(repository, credentials, *, drills=False):
                 payload = {"result": dispatch(role, request)}
             else:
                 raise APIError("404 Not Found", "UNKNOWN_ROUTE")
-            data = json.dumps(payload, default=encode, allow_nan=False).encode()
+            data = payload if isinstance(payload, bytes) else json.dumps(payload, default=encode, allow_nan=False).encode()
         except APIError as error:
             status = error.status
             data = json.dumps({"error": error.code, "request_id": request_id}).encode()
@@ -220,8 +279,10 @@ def application(repository, credentials, *, drills=False):
             LOGGER.warning("Coordinator request %s failed (%s)", request_id, type(error).__name__)
             status = "503 Service Unavailable"
             data = json.dumps({"error": "COORDINATOR_UNAVAILABLE", "request_id": request_id}).encode()
-        start_response(status, [("Content-Type", "application/json"),
-                                ("Content-Length", str(len(data))), ("Cache-Control", "no-store")])
+        binary = status == "200 OK" and route == ("GET", "/v1/checkpoint")
+        start_response(status, [("Content-Type", "application/octet-stream" if binary else "application/json"),
+                                ("Content-Length", str(len(data))), ("Cache-Control", "no-store"),
+                                ("Referrer-Policy", "no-referrer"), ("X-Content-Type-Options", "nosniff")])
         return [b"" if environ["REQUEST_METHOD"] == "HEAD" else data]
 
     return handle
