@@ -799,3 +799,20 @@
   expired-lease and corruption diagnostics to prove no state mutation.
 - Hosted doctor/transfer checks remain NOT_RUN. No hardware/provider actions.
   Next: real PyTorch checkpoint/resume through the full signed API/client path.
+
+### 2026-11-08 — Autonomous software update 10 — Genuine training through signed API
+
+- Added a full real PyTorch baseline/checkpoint/restore/completion test through
+  CloudClient, CloudWorkerCoordinator, authenticated WSGI API and isolated stores.
+  Only the network layer is replaced with an in-process WSGI opener; this is not
+  new hosted TLS, Atlas, multi-process or cross-device evidence.
+- Corrupt signed GET bytes are rejected before file publication or ownership
+  claim. After valid retry, standby executes all steps 26..200 from checkpoint 25;
+  final loss sequence and every final model tensor equal the uninterrupted baseline.
+- `.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_signed_training.py -v`:
+  1/1 passed in 11.617 s. Observed 45,296-byte checkpoint, 32 linked journal
+  events, same-host RTO 235.896 ms, graceful RPO 0, max loss difference 0.0.
+  These timings are local test measurements, not campus recovery performance.
+- `python -m compileall -q liferaft tests scripts` and `git diff --check` passed.
+- File: tests/test_signed_training.py. No hardware, live service, provider or
+  credential changes. Next: final protocol adversarial review and operator docs.
