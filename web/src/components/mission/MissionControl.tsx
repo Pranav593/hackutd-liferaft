@@ -90,6 +90,14 @@ export function MissionControl() {
     };
   }, [mode, liveRev]);
 
+  // Open straight into live mode when the hosted coordinator is reachable.
+  useEffect(() => {
+    fetch("/api/live", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && Object.values(j.ready ?? {}).some(Boolean) && setMode("live"))
+      .catch(() => {});
+  }, []);
+
   const events: Ev[] = useMemo(() => {
     if (mode === "replay") return story ? fromStory(story) : [];
     return live?.replay ? fromLive(live.replay) : [];
@@ -240,7 +248,7 @@ export function MissionControl() {
                     ? "All three device agents are ready."
                     : "Waiting for the Pi, Windows standby and ESP32 bridge agents."}
           </p>
-          {(liveError || startError) && <p className="err">{startError || liveError} Switch to Replay to see the story offline.</p>}
+          {(liveError || startError) && <p className="err">{friendlyError(startError || liveError)} Switch to Replay to see the story offline.</p>}
         </section>
       )}
 
@@ -532,6 +540,12 @@ export function MissionControl() {
       </footer>
     </main>
   );
+}
+
+function friendlyError(message: string) {
+  return /CLOUD_TOKEN|operator/i.test(message)
+    ? "The operator token is missing. Paste it into .env.operator (LIFERAFT_CLOUD_TOKEN=…) from Render → liferaft-coordinator → Environment → LIFERAFT_OPERATOR_TOKEN, then refresh."
+    : message;
 }
 
 function Kpi({ label, value, hint, good }: { label: string; value: string; hint: string; good?: boolean }) {
