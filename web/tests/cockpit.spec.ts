@@ -38,7 +38,7 @@ test("five cards open technical evidence in place and restore focus", async ({
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?gl=off");
+  await page.goto("/evidence?gl=off");
   await expect(page.locator("#outcome-title")).toHaveText(
     "The workkept going.",
   );
@@ -58,7 +58,7 @@ test("five cards open technical evidence in place and restore focus", async ({
 test("cursor, filters, raw evidence, deep links and re-verification remain linked", async ({
   page,
 }) => {
-  await page.goto("/?gl=off");
+  await page.goto("/evidence?gl=off");
   await expect(page.locator("#outcome-title")).toContainText("kept going.");
   await page.getByRole("button", { name: "First event", exact: true }).click();
   await page.getByRole("button", { name: "Next event", exact: true }).click();
@@ -96,7 +96,7 @@ for (const width of [1920, 1440, 1280, 768, 390, 320])
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/?gl=off");
+    await page.goto("/evidence?gl=off");
     await expect(page.locator("#outcome-title")).toContainText("kept going.");
     await page.evaluate(() => document.fonts.ready);
     expect(
@@ -192,7 +192,7 @@ for (const state of [
         body: JSON.stringify({ replay }),
       });
     });
-    await page.goto("/?gl=off");
+    await page.goto("/evidence?gl=off");
     if (state === "empty")
       await expect(page.locator("#outcome-title")).toContainText(
         "work matters.",
@@ -223,7 +223,7 @@ test("handoff clipboard, print, devices and plain-language help", async ({
   context,
 }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/?gl=off");
+  await page.goto("/evidence?gl=off");
   await page.getByRole("button", { name: cards[4][0] }).click();
   await page.getByRole("button", { name: "Copy text", exact: true }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
@@ -249,7 +249,7 @@ test("mobile detail focus stays contained and technical tabs are accessible", as
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?gl=off");
+  await page.goto("/evidence?gl=off");
   const opener = page.getByRole("button", { name: cards[2][0] });
   await opener.click();
   for (let i = 0; i < 18; i++) {
@@ -279,7 +279,7 @@ test("technical WebGL is an enhancement with context recovery and no shader erro
       errors.push(m.text());
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/?gl=lose");
+  await page.goto("/evidence?gl=lose");
   await page.getByRole("button", { name: cards[1][0] }).click();
   await expect(page.locator(".topo-status")).toContainText(
     /WebGL|3D unavailable/,

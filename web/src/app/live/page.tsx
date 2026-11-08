@@ -1,5 +1,5 @@
-import { LiveCockpit } from "../../components/live/LiveCockpit";
+import { redirect } from "next/navigation";
 
 export default function LivePage() {
-  return <LiveCockpit />;
+  redirect("/");
 }

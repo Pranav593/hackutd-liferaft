@@ -1,5 +1,5 @@
-import { StoryCockpit } from "../../components/story/StoryCockpit";
+import { redirect } from "next/navigation";
 
 export default function StoryPage() {
-  return <StoryCockpit />;
+  redirect("/");
 }

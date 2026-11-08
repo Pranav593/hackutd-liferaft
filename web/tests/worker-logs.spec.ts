@@ -36,7 +36,7 @@ test("live activity auto-selects job, separates devices and pauses updates", asy
   await page.route("**/api/worker-logs", (route) =>
     route.fulfill({ json: feed }),
   );
-  await page.goto("/story");
+  await page.goto("/evidence");
   const logs = page.locator(".worker-logs");
   await expect(logs).toContainText("browser-test-job");
   await expect(

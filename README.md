@@ -10,6 +10,18 @@ decide, evacuate, prove, brief**.
 
 [Live Raspberry Pi demo and previous-job verification](docs/LIVE_HARDWARE_DEMO.md)
 
+## Mission Control dashboard (single page)
+
+`npm run dev` then open http://127.0.0.1:3000. One page tells the whole story in
+plain English: a fleet map with a "baton" showing which machine owns the job,
+a six-step narrative, early-warning and loss charts, "why not just a database"
+guardrails, the read-only AI ops agent, the on-call channel, a shift handoff
+brief and a cost model. **Replay** (works offline) plays four real drills
+(overheating, crash, corrupted save, zombie primary). **Live hardware** polls the
+hosted coordinator and can start the Pi job. Toggle **Show technical details** for the
+hash-chained flight recorder. The previous console is at `/evidence`; `/story`
+and `/live` redirect to `/`.
+
 ## Run the MVP presentation
 
 ### Pi + Windows training logs
