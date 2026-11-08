@@ -13,7 +13,6 @@ export type State = {
   playing: boolean;
   speed: number;
   filters: Filters;
-  inspectorOpen: boolean;
   topologyMode: "2d" | "3d";
   motion: "system" | "reduced" | "full";
   quality: "auto" | "high" | "mid" | "low";
@@ -29,7 +28,6 @@ const initial: State = {
   playing: false,
   speed: 1,
   filters: defaultFilters,
-  inspectorOpen: false,
   topologyMode: "3d",
   motion: "system",
   quality: "auto",
@@ -54,14 +52,13 @@ export function useCockpit<T>(selector: (state: State) => T) {
     () => selector(initial),
   );
 }
-export function select(id: string, open = true) {
+export function select(id: string) {
   const index = state.replay?.events.findIndex((e) => e.id === id) ?? -1;
   if (index < 0) return;
   update({
     selectedId: id,
     cursor: index,
     previous: -2,
-    inspectorOpen: open,
     playing: false,
   });
 }

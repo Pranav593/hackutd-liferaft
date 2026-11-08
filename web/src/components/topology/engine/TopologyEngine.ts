@@ -66,9 +66,6 @@ export class TopologyEngine {
   private reduced = false;
   private selected: NodeId | null = null;
   private raycaster = new Raycaster();
-  private bloom: ReturnType<(typeof import("./Bloom"))["createBloom"]> | null =
-    null;
-  private bloomLoading = false;
   private notches: InstancedMesh;
   private velocity = new Vector3();
   private lookVelocity = new Vector3();
@@ -306,7 +303,6 @@ export class TopologyEngine {
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / Math.max(1, height);
     this.camera.updateProjectionMatrix();
-    this.bloom?.resize(width, height);
     this.request();
   }
   setTier(tier: Tier) {
@@ -319,25 +315,6 @@ export class TopologyEngine {
     );
     if (this.observer) this.resize();
     // Flat illustration style: no bloom or halo passes.
-  }
-  private configureBloom() {
-    if (this.tier !== "high") {
-      this.bloom?.dispose();
-      this.bloom = null;
-      return;
-    }
-    if (this.bloom || this.bloomLoading) return;
-    this.bloomLoading = true;
-    void import("./Bloom")
-      .then(({ createBloom }) => {
-        this.bloomLoading = false;
-        if (this.dead || this.tier !== "high") return;
-        this.bloom = createBloom(this.renderer, this.scene, this.camera);
-        this.resize();
-      })
-      .catch(() => {
-        this.bloomLoading = false;
-      });
   }
   setMotion(reduced: boolean) {
     this.reduced = reduced;
@@ -513,8 +490,7 @@ export class TopologyEngine {
         this.baton.visible = false;
       }
     }
-    if (this.bloom) this.bloom.render();
-    else this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
     this.rendered++;
     if (this.canvas.dataset) {
       this.canvas.dataset.renderCount = String(this.rendered);
@@ -557,8 +533,6 @@ export class TopologyEngine {
     document.removeEventListener("visibilitychange", this.visibility);
     this.resources.forEach((r) => r.dispose());
     this.resources.clear();
-    this.bloom?.dispose();
-    this.bloom = null;
     this.scene.clear();
     this.renderer.dispose();
     if (loseContext) this.renderer.forceContextLoss();

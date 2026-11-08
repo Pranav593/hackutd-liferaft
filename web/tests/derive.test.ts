@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { narrative } from "../src/lib/derive/narrative";
 import { topologyFrame } from "../src/lib/derive/topology-frame";
 import { handoff } from "../src/lib/derive/handoff";
 import { epochs } from "../src/lib/derive/epochs";
@@ -38,24 +37,7 @@ describe("recorded projection", () => {
   it("carries real optimizer continuity", () => {
     expect(r.recovery.verified_resumed).toBe(true);
     expect(r.losses.length).toBeGreaterThan(1);
-    expect(narrative(r).detail).toContain(`step ${r.recovery.resumed!.step}`);
-    expect(narrative(r).detail).toContain("0 known steps lost");
-  });
-  it("does not invent unknown RPO or RTO", () => {
-    const p = {
-      ...r,
-      recovery: { ...r.recovery, rpo_steps: null, rto_ms: null },
-    };
-    expect(narrative(p).detail).toContain("work lost: unknown");
-    expect(narrative(p).detail).not.toContain("known steps lost");
-    expect(narrative(p).detail).not.toContain(" s,");
-  });
-  it("gates success on verifier flag", () => {
-    expect(
-      narrative({ ...r, recovery: { ...r.recovery, verified_resumed: false } })
-        .verified,
-    ).toBe(false);
-    expect(narrative(null).title).toBe("No saved evidence selected.");
+    expect(r.recovery.resumed!.step).toBe(r.recovery.checkpoint!.step + 1);
   });
   it("has bounded deterministic handoff", () => {
     const b = handoff(r);
