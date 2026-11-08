@@ -116,6 +116,12 @@ Actual hardware proof comes from serial capture, not compilation alone.
 
 ## Required next physical steps
 
+**Deferred by the operator after this report was published:** no sensor/OLED test
+or breadboard assembly is requested now. External-button wiring also waits for
+the larger breadboard session. See `HARDWARE_CONNECTION_REFERENCE.md` for the
+saved header order, current base-hardware status and how to resume. The steps
+below apply when that assembly resumes, not as actions required immediately.
+
 1. Unplug ESP32 USB before adding/removing jumpers. Leave the relay disconnected.
 2. Supply a clear separate-button photo, temperature-sensor printed part number
    and back-of-sensor-board photo. The G/R/Y header letters alone are insufficient

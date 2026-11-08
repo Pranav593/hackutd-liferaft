@@ -1,5 +1,11 @@
 # Hardware readiness and next steps
 
+**Current operator direction:** breadboard wiring and accessory tests are deferred.
+The latest photo-based header reference and base-hardware handoff are in
+`docs/HARDWARE_CONNECTION_REFERENCE.md`. Earlier inspection notes below retain
+their historical context; the later physical ESP32 test supersedes initial
+"not detected" observations.
+
 Scope: Pi preparation alongside the software team's Phase 3. ESP32 wiring is
 deferred at the hardware operator's request. Nothing here marks Phase 3 complete.
 

@@ -312,3 +312,22 @@
   publication. No TypeScript changes or TypeScript validation are claimed.
   On-Pi health service installation, accessory wiring/tests, combined firmware
   and full physical-button cloud recovery remain NOT RUN.
+
+### 2026-11-08 UTC — Hardware base handoff; breadboard accessories deferred
+
+- Operator supplied temperature breakout and OLED front/back photos and explicitly
+  postponed their tests until later breadboard assembly. Recorded exact visible
+  header order and orientation in `docs/HARDWARE_CONNECTION_REFERENCE.md`:
+  temperature G/R/Y with S nearby; OLED front GND/VCC/SCL/SDA; native ESP32 USB
+  connection verified previously. The operator reports no sensor-back markings.
+  Sensor supply/data assignments and OLED ratings are not inferred from photos.
+- External button and all breadboard wiring remain deferred with that assembly.
+  Base hardware evidence remains the verified Pi setup and actual ESP32 USB-only
+  application test. No additional flash, GPIO operation, accessory wiring,
+  Pi workload or cloud setting change was performed for this documentation step.
+- Updated readiness/progress notes to distinguish the current deferral from the
+  earlier request for immediate component identification. Phase 4/5 remain
+  incomplete; no sensor or whole-system completion claim was added.
+- Validation: `git diff --check`. Documentation-only change; no additional
+  firmware tests or full regression rerun required. Earlier 26-test publication
+  and real board-only serial evidence remain recorded above.
