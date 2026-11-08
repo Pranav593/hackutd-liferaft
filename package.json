@@ -1,11 +1,25 @@
 {
-  "name": "liferaft-contracts",
+  "name": "liferaft-console",
   "version": "0.1.0",
   "private": true,
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "scripts": {
+    "dev": "next dev web --hostname 127.0.0.1",
+    "build": "next build web",
+    "start": "next start web --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit -p web/tsconfig.json"
   }
 }

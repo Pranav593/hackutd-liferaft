@@ -48,6 +48,39 @@ From the project folder on this Mac:
 
 Copy the `path` value from the final `CHECKPOINT_VERIFIED` line into the second command. Keep the `.json` manifest next to the `.pt` file. The resumed process should emit `TRAINING_STEP_COMPLETED` with `step_completed` 121. `--steps` sets the total target step. The logs give actual loss and checkpoint SHA-256. Only resume files produced by your own trusted LIFERAFT run. The local proof compares losses and final tensors exactly on one host. Cross-architecture evidence is tracked separately.
 
+## Open the recovery cockpit
+
+From the repo root, with the Python environment set up and the saved campus drill
+at `.liferaft/campus-button-05.jsonl`, run:
+
+```bash
+npm ci
+LIFERAFT_COCKPIT_JOB=campus-button-05 npm run dev
+```
+
+Open [the local cockpit](http://127.0.0.1:3000). The topology highlights the
+selected event's route. Use the flight recorder to switch between milestones and
+all events, inspect evidence, and rerun journal verification.
+
+The console shows saved evidence and listens on loopback. The campus export has
+one measured loss point. To see a full local curve, run the local failover demo
+below, then point the cockpit at the run directory printed in its output:
+
+```bash
+LIFERAFT_COCKPIT_JOB=local-job LIFERAFT_COCKPIT_LOCAL_RUN=.liferaft/phase2-REPLACE_ME npm run dev
+```
+
+`LIFERAFT_COCKPIT_EVENTS` selects a journal at a different path.
+`LIFERAFT_COCKPIT_INVESTIGATION` optionally points to a saved JSON line from
+`liferaft investigate` for the same job and incident. The console validates its
+tool evidence against the journal before showing it. On PowerShell, set each
+variable with `$env:NAME = "value"` before running `npm run dev`.
+
+`npm run typecheck` and `npm run build` check the console. Use `npm start` after
+building, with the same environment variables. A custom Python executable can
+be selected using `LIFERAFT_COCKPIT_PYTHON`. Keep evidence files private and
+serve the console locally.
+
 ## Run the local failover demo
 
 From the project folder, run either scenario in the same environment that passed the training doctor check.

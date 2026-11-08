@@ -12,3 +12,6 @@ node_modules/
 *.sqlite*
 *.pt
 .DS_Store
+
+web/next-env.d.ts
+*.tsbuildinfo

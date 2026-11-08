@@ -60,7 +60,7 @@ def recovery_brief(events, job_id):
     incidents = [e.incident_id for e in events if e.incident_id]
     incident = incidents[-1] if incidents else None
     scoped = [e for e in events if incident and e.incident_id == incident]
-    transfers = [e for e in scoped if e.event_type == "LEASE_TRANSFERRED"]
+    transfers = [e for e in scoped if e.event_type == "LEASE_TRANSFERRED" and e.source_type == "derived"]
     transfer = transfers[-1] if transfers else None
     unknowns = ["Physical computer identity is not independently attested by this journal.",
                 "Checkpoint bytes were not rehashed by this report; verification is coordinator-recorded."]
@@ -73,7 +73,7 @@ def recovery_brief(events, job_id):
         unknowns.append("No ownership transfer recorded for the latest incident.")
         return result
     t = transfer.evidence
-    commits = [e for e in events if e.event_type == "CHECKPOINT_COMMITTED"
+    commits = [e for e in events if e.event_type == "CHECKPOINT_COMMITTED" and e.source_type == "derived"
                and e.created_utc <= transfer.created_utc
                and e.worker_id == t.get("previous_owner") and e.lease_epoch == t.get("previous_epoch")
                and e.evidence.get("checkpoint_id") == t.get("checkpoint_id")
@@ -90,7 +90,6 @@ def recovery_brief(events, job_id):
         return result
     if (not commits or not firsts or type(step) is not int or step < 1
             or transfer.worker_id == t.get("previous_owner")
-            or any(e.source_type == "simulated" for e in [*commits, transfer, *firsts])
             or type(t.get("previous_epoch")) is not int or transfer.lease_epoch != t["previous_epoch"] + 1):
         unknowns.append("Commit, ownership and measured first-step evidence is incomplete or inconsistent.")
         return result
@@ -111,7 +110,7 @@ def recovery_brief(events, job_id):
         result["rto_ms"] = rto
     else:
         unknowns.append("Coordinator-measured recovery time is unavailable.")
-    yields = [e for e in scoped if e.event_type == "PRIMARY_YIELDED"
+    yields = [e for e in scoped if e.event_type == "PRIMARY_YIELDED" and e.source_type == "derived"
               and e.created_utc <= transfer.created_utc and e.worker_id == t["previous_owner"]
               and e.lease_epoch == t["previous_epoch"] and type(e.evidence.get("step")) is int
               and e.evidence["step"] >= step]
@@ -120,7 +119,7 @@ def recovery_brief(events, job_id):
     else:
         unknowns.append("Primary's final completed step is unknown; crash RPO remains unknown.")
     result["completed_after_resume"] = any(
-        e.event_type == "JOB_COMPLETED" and e.created_utc >= first.created_utc
+        e.event_type == "JOB_COMPLETED" and e.source_type == "derived" and e.created_utc >= first.created_utc
         and e.worker_id == first.worker_id and e.lease_epoch == first.lease_epoch
         and type(e.evidence.get("step")) is int and e.evidence["step"] >= first.evidence["step"]
         for e in scoped)

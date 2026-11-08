@@ -1,6 +1,6 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
-**Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
+**Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. The Next.js cockpit can replay verified saved journals locally. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
 
 ## Workflow rules
 
@@ -91,10 +91,11 @@
 - [ ] Channel failure does not block recovery.
 - **Gate:** real phone/provider round trip correlated to incident.
 
-### Phase 9 — Real-data operations cockpit — NOT_STARTED
-- [ ] True topology, freshness, real loss curve, checkpoint ledger and flight recorder.
-- [ ] Clearly distinguished injected vs measured states, no mock visuals as truth.
-- [ ] Nemotron trace and Photon delivery/ACK evidence.
+### Phase 9 — Real-data operations cockpit — IN_PROGRESS (saved evidence replay)
+- [x] Saved-evidence topology, recorded loss, checkpoint ledger and hash-verified flight recorder.
+- [x] Replay labels, event provenance, explicit unknowns and no-data states.
+- [x] Saved Nemotron trace validation and evidence links pass fixture tests.
+- [ ] Live coordinator freshness, readiness scoring, measured sensor feed, and Photon delivery/ACK evidence.
 - [ ] Demo controls only in demo mode, no unsafe hardware action.
 - [ ] UI API / auth / responsive / empty-state tests.
 - **Gate:** observer can prove real cross-device rescue from actual evidence.
@@ -156,8 +157,9 @@
 ## Phase U — Upscale layer (presentation + idea) — IN_PROGRESS
 - [x] `docs/UPSCALE_PLAN.md`, `docs/UI_DESIGN_SYSTEM.md`, `docs/DEMO_SCRIPT_AND_SUBMISSION.md`
 - [x] `web/demo/index.html` simulated cockpit (SIMULATED badge; no live data claimed)
-- [ ] Port cockpit to Next.js `web/` and bind to real events
-- [ ] Add `prev_hash` chain + Verify button, Lifeboat Score from real telemetry
+- [x] Port cockpit to Next.js `web/` and bind to verified saved events
+- [x] Use existing `prev_hash` chain with an explicit re-verification control
+- [ ] Bind live data and compute Lifeboat Score from fresh telemetry
 
 ### 2026-11-07 — Phase 0 — DONE
 
@@ -869,3 +871,49 @@
 - Twelve major updates were independently committed and pushed. Next work should
   use the documented hosted checks when a deployment/isolated Atlas is authorized
   and available, while preserving the local adapter and recorded physical proof.
+
+
+### 2026-11-08 UTC — Phase 9 — IN_PROGRESS
+
+- Built a localhost Next.js replay cockpit in `web/src` with a five-node WebGL/SVG
+  topology, reduced-motion support, measured loss chart, linked checkpoint ledger,
+  flight recorder, sensor provenance and saved Nemotron trace. The browser receives
+  a redacted projection from `liferaft/cockpit.py`. The route accepts only
+  server-configured input paths. It uses the existing Python journal verifier and
+  recovery brief, so the browser cannot promote provider text to recovery proof.
+- Display decisions. Mark older exports as unanchored. Use a single dot when only
+  one loss sample exists. Plot local worker logs separately from journal proof.
+  Missing hardware readings, Photon receipts and live score inputs show no data.
+  Invalid optional Nemotron attachments are flagged separately from journal failure.
+- Commands and results:
+  - `.venv/bin/python -m liferaft demo --scenario cooling-test` completed with two
+    local processes. `cockpit-data --job local-job --local-run
+    .liferaft/phase2-9_xemq61` projected 21 events and 70 real loss samples.
+    Checkpoint 32 → first step 33, completed at 70, RTO 2.183 s, RPO 0.
+  - `.venv/bin/python -m liferaft cockpit-data --job campus-button-05` verified the
+    saved 79-event legacy journal. Checkpoint 25 → first step 26, completed at
+    200, recorded RTO 6.534 s and RPO 0. It contains one measured loss sample.
+    This replays the previously recorded physical-button drill.
+  - `.venv/bin/python -m unittest discover -s tests -v` ran 67 tests in 51.250 s.
+    62 passed, five skipped. Three repository fault tests need the optional
+    cloud dependencies and two live tests are opt-in.
+  - `npm run typecheck`, `NEXT_TELEMETRY_DISABLED=1 npm run build`,
+    `.venv/bin/python -m compileall -q liferaft tests scripts` and
+    `git diff --check` passed. Dependencies were installed from the existing npm
+    cache because the shell cannot resolve the public registry.
+  - Direct calls to the compiled GET handler passed for empty config, rejected
+    non-loopback Host, missing evidence, campus replay and the local replay.
+    The sandbox rejected the dev server's loopback listen with EPERM. Chrome
+    rendered the actual React components with the compiled route's response in a
+    file-backed QA preview. Desktop and 390 px layouts, Verify chain, event
+    filtering and keyboard event selection were checked there.
+- Hardware safety. Only the local training demo ran. There were no hardware
+  operations or new hosted/provider observations in this pass.
+- Next gate. Run the live coordinator-backed cockpit with fresh telemetry and
+  operator auth, then observe an end-to-end recovery in the running console.
+  Hosted Atlas, Pi/OLED/ambient and Photon gates remain open. No human action was
+  requested in this pass.
+- GitHub push was requested during this milestone. The local Git index is
+  read-only in this session, shell DNS could not resolve GitHub, and the GitHub
+  integration returned 403 when creating the commit tree. GitHub main was
+  verified at the starting commit before the write attempt. Changes are local.

@@ -57,6 +57,15 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(recovery_brief(fixture_events()[:3], "job")["verified_resumed"])
         self.assertFalse(recovery_brief([], "job")["verified_resumed"])
 
+    def test_simulated_yield_and_completion_do_not_support_recovery_metrics(self):
+        events = fixture_events()
+        for index in (2, 5):
+            events[index] = events[index].model_copy(update={"source_type": "simulated"})
+        report = recovery_brief(events, "job")
+        self.assertTrue(report["verified_resumed"])
+        self.assertIsNone(report["rpo_steps"])
+        self.assertFalse(report["completed_after_resume"])
+
     def test_cli_verifies_then_writes_immutable_allowlisted_report(self):
         with TemporaryDirectory() as temp:
             root = Path(temp)
