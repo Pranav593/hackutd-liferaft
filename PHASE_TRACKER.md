@@ -964,3 +964,166 @@
 - `npm run typecheck`, `NEXT_TELEMETRY_DISABLED=1 npm run build`,
   `.venv/bin/python -m compileall -q liferaft tests scripts`, and
   `git diff --check` passed.
+
+### 2026-11-08 UTC — Cockpit S0 foundations — DONE
+
+- Installed pinned three 0.170.0, matching types, Vitest 4.1.12, Playwright and axe;
+  vendored local font files and licenses. npm audit: zero vulnerabilities after
+  replacing the initially selected vulnerable older Vitest. No frozen files edited.
+- Added authoritative docs/COCKPIT_PLAN.md, pure narrative, timeline, ownership,
+  ledger, relations, loss, handoff and topology-frame derivations; external-store
+  cursor and independent hover store. Added real local projection fixture.
+- Commands: `python -m liferaft demo --scenario cooling-test` (venv Python),
+  `python -m liferaft cockpit-data --job local-job --local-run .liferaft/phase2-ahf9ym0g`,
+  `npm run typecheck` (PASS), `npx vitest run` (9/9 PASS), `npm audit` (0).
+- Fixture is newly measured same-machine two-process training, not distributed
+  recovery. Historical campus-button-05 coordinator export is absent. Available
+  campus-button-04 files are worker logs; rejected by the frozen verifier and not
+  passed off as projection fixtures. No hardware/provider/deployment performed.
+- No human action required. Next: S1 accessible hero and replay controls.
+
+### 2026-11-08 UTC — Cockpit S1 hero — IMPLEMENTED, HUMAN QA OPEN
+
+- Added truthful headline, four evidence beats, checkpoint/optimizer proof,
+  shared replay transport and accessible five-node 2D map. Preserved loopback API.
+- `npm run typecheck`, `npx vitest run` (9/9), `npm run build`: PASS.
+  Real HTTP/Playwright verified API projection, non-loopback 403, security headers,
+  linked cursor/filter/deep-link/reverify flow: PASS. Production loopback server
+  started with local-run env, no provider or hardware actions.
+- Fresh same-host run: 20 events, 70 actual losses, checkpoint 30 -> measured 31,
+  completion 70, derived RTO 5221.859 ms, RPO 0. Not cross-device evidence.
+- Human ten-second usability gate NOT_RUN; no unfamiliar viewers available.
+- First browser audit caught invalid definition-list placement; corrected badge
+  into dd. Full responsive/a11y rerun pending. No human setup needed.
+- Next: S2 GPU lifecycle validation; then linked-view hardening.
+
+### 2026-11-08 UTC — Cockpit S2 topology — IMPLEMENTED, DEVICE QA OPEN
+
+- Procedural laptop/coordinator/Pi/ESP32 geometry, curved routes, eight-slot
+  instanced packet pool, ownership baton, epoch notches, procedural shadows,
+  Fresnel rims, critically damped camera, capped density and high-tier lazy bloom.
+- Added render-on-demand, visibility suspension, tier degradation, disposal registry,
+  context reconstruction with bounded retries, software-renderer 2D fallback,
+  keyboard node proxies, quality/motion/2D controls and dev QA hooks.
+- `npm run typecheck`: PASS. `npm test`: 13/13 PASS including four instrumented
+  renderer lifecycle tests (20 mounts, tracked geometry/textures return to zero,
+  no idle loop, reduced-motion one frame, context-preserving disposal).
+- `npm run test:e2e`: 14/14 PASS against production server before final visual
+  enhancements. Browser in this environment selected honest static fallback;
+  physical GPU context-loss and five-minute soak remain NOT_RUN. Instrumented
+  tests do not claim physical GPU proof. No hardware or human setup required.
+- Next: S3 linked evidence validation.
+
+### 2026-11-08 UTC — Cockpit S3 linked views — IMPLEMENTED
+
+- Shared cursor drives replay transport, topology as-of state, chart cursor,
+  checkpoint/recorder selection, ownership ranges and responsive Inspector.
+  Added kind/source/worker/epoch/derived-severity/search filters, bounded recorder
+  paging (200 rows), chain prefixes, related-event navigation, raw redacted JSON,
+  loss drag/keyboard zoom, linear/log scale, measured sample table and origin dots.
+- Contract compile check `npm run test:contracts`: PASS; `npm run typecheck`: PASS.
+  Nine pure derivation tests plus four lifecycle tests pass. Browser flow validates
+  filtering without mutating headline truth, URL/reload and reverify preservation.
+- `npm run test:e2e`: 14/14 PASS including serious/critical axe audits at
+  1440/768/390/320 px, mobile sheet open/Esc and no horizontal page overflow.
+  Network abort, 403, 422, empty, simulated and one-sample states pass.
+- Browser states based on intercepted responses are test injections, not new
+  service/provider evidence. Historical campus fixture unavailable. Next: S4.
+
+### 2026-11-08 UTC — Cockpit S4 intelligence/operators — IMPLEMENTED
+
+- Added deterministic <=120-word shift brief with copy text/Markdown and paper-only
+  print layout. Read-only validated Nemotron tool/fact evidence remains distinct
+  from recovery authority. Missing Photon/CPU/fresh readiness has designed NO DATA.
+- `npm test`: handoff determinism/word bound passes. Production Playwright copy,
+  clipboard readback, shortcut help and print/PDF visibility checks PASS.
+  `.venv/Scripts/python.exe -m unittest discover -s tests -p test_cockpit.py -v`:
+  3/3 PASS including provider validation, tampering and legacy journal rejection.
+- No real Photon/NVIDIA interaction or sensor observation performed. No external
+  action required for this replay scope. Next: S5 hardening and budget measurement.
+
+### 2026-11-08 UTC — Cockpit S5 hardening — IMPLEMENTED, BUDGET GATE OPEN
+
+- Added responsive layouts, mobile evidence tabs and focus-trapped/drag-dismissable
+  inspection, persistent motion preference, forced-colors and print styles,
+  accessible source glyphs, local fonts/licenses, security headers and CSP with
+  no third-party origins. Requests have an eight-second browser deadline while
+  the frozen server verifier retains its original five-second deadline.
+- Fixed invalid dl markup, closed-disclosure focus leakage, default empty-content
+  prerender shifts, camera-label layout shifts, initial camera framing and bloom
+  background. Large event/sample tables use bounded 200-row pages. Relation
+  indexes are built once per replay without quadratic full-journal filtering.
+- Commands observed: `npm run typecheck`, `npm run test:contracts`, `npm test`
+  (14/14 PASS), `npm run build` (PASS), `npm audit` (zero vulnerabilities),
+  `git diff --check` (PASS; informational Windows LF/CRLF notices only).
+  Python projector regression: 3/3 PASS in 0.364 s. All frozen Python/contracts/
+  replay API/type files are unchanged according to targeted Git diff.
+- `npm run test:e2e`: 16/16 PASS before final cosmetic framing/background pass;
+  final rerun status is appended below. Includes actual API/Python projection,
+  security headers and loopback rejection, selected event/URL/filter/reverify,
+  empty/403/422/network/simulated/single-sample inputs, clipboard/print, mobile
+  focus containment/restoration, WebGL shader/context recovery, and serious/
+  critical axe checks at 1440/768/390/320 px and in WebGL/reduced-motion mode.
+- `node scripts/cockpit-soak.mjs`: PASS, actual Chrome WebGL at mid tier,
+  303389 ms, 548 navigation actions, zero captured runtime/shader errors.
+  After warm-up, geometries stayed 39 and textures 1 across minute 1–5 samples;
+  sampled draw calls 18–19, triangles 1098–1494, final idle render count stable.
+  Resource disposal also passes 20 real browser mount cycles and four separately
+  instrumented lifecycle tests. These are renderer counts, not GPU VRAM attestation.
+- Final `node scripts/cockpit-budget.mjs` measurement: LCP 1508 ms;
+  CLS 0.0000004778374566 (visually negligible, not literally the specified zero);
+  non-3D JS 156838 bytes gzipped, 3D lazy load 133443 bytes gzipped.
+  Automated click roundtrips 61.966–82.430 ms, not field INP measurements.
+- Explicit misses: full baseline JS exceeds the 120 KB target. React/Next/router
+  shared chunks alone account for most of this load; no framework migration was
+  made to conceal the miss. Strict CLS=0 also remains a numerical target miss.
+  LCP and lazy 3D chunk targets pass in this local observation.
+- NOT_RUN: Safari, Firefox, VoiceOver, named Apple/2019-integrated GPU FPS,
+  historical campus-button-05 fixture and the two-of-three-person ten-second test.
+  No hardware, hosted coordinator, provider, deployment or credential action.
+  No human action required to run the implemented replay. Next: S6 retirement/docs.
+
+### 2026-11-08 UTC — Cockpit S6 polish / handoff — IMPLEMENTED
+
+- Added docs/COCKPIT_IMPLEMENTATION.md with exact PowerShell setup, fixture
+  provenance, commands, graphics QA, event bookmarks, limitations and legacy
+  parity. Updated README, UI_DESIGN_SYSTEM pointer, UPSCALE UI sections, AGENTS
+  UI source of truth and demo script. Kept historical tracker entries intact.
+- Removed the legacy HTML entry point and unused monolithic cockpit/topology/loss
+  components after parity review. No simulated rescue controls/chat remain.
+- Added .github/workflows/cockpit.yml for typecheck, fixture contract check, unit/
+  lifecycle tests and production build. This workflow is local code; no remote CI
+  execution or deployment is claimed. Dependencies remain exactly pinned.
+- QA files: .liferaft/cockpit-qa-results.json, cockpit-budget.json,
+  cockpit-soak.json, cockpit-hero.png, cockpit-desktop-final.png, cockpit-*.png,
+  handoff.pdf. QA artifacts remain ignored/private. UI uses only redacted data.
+- Known acceptance limits remain in S5; software scope is implemented without
+  marking unrelated live/cloud/hardware phases DONE. No push/deployment performed.
+
+### 2026-11-08 13:12 UTC — Final cockpit regression evidence
+
+- Final production rebuild and restart completed. `npm run test:e2e`: 16/16 PASS
+  in 58.5 s against the final framing/background/blur build, including real WebGL
+  context restoration, shader checks, reduced-motion axe and mobile focus trap.
+- Refreshed final hero/topology/full-desktop screenshots. Production server remains
+  available at http://127.0.0.1:3000 with the genuine local-run replay configured.
+- Final typecheck and fixture compile PASS; unit/lifecycle 14/14 PASS; Python
+  projection regression 3/3 PASS; npm audit 0; Git whitespace check PASS.
+- All frozen boundaries remain unchanged. Strict 120 KB baseline/zero CLS,
+  unavailable historical fixtures and external browser/usability/FPS gates remain
+  explicit in docs/COCKPIT_IMPLEMENTATION.md. No credentials or hardware needed
+  for local replay, and no new cloud/provider/hardware success is claimed.
+
+### 2026-11-08 13:14 UTC — Palette-only follow-up
+
+- Unknown-node pins/edges now use neutral NO DATA colors. Screen compositing
+  preserves the navy background under high-tier bloom. No geometry, recovery,
+  storage or API behavior changed.
+- Rebuilt production, typecheck PASS, unit/lifecycle 14/14 PASS. Targeted real
+  WebGL lifecycle/context-restoration/reduced-motion axe regression: 2/2 PASS.
+  The preceding full browser run remains 16/16 PASS in 58.5 s; the JSON reporter
+  now contains this latest two-test targeted run rather than the earlier full run.
+- Updated performance probe: LCP 1604 ms, baseline 156840 gzip bytes, lazy 3D
+  133479 gzip bytes, CLS 0.0000004778374566. Budget misses are unchanged.
+- Refreshed final screenshots. The five-minute soak remains applicable to the
+  unchanged scene resources/lifecycle. No additional external action performed.

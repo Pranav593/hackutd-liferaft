@@ -1,0 +1,63 @@
+@media print {
+  body {
+    background: #eeebe3 !important;
+    color: #0b1426 !important;
+  }
+  body:before,
+  .site-header,
+  .mode-banner,
+  .section-nav,
+  .skip-link,
+  footer,
+  .scrubber,
+  .shortcut-help,
+  .no-print,
+  .cockpit:before {
+    display: none !important;
+  }
+  .shell {
+    width: 100%;
+    margin: 0;
+  }
+  .cockpit > section,
+  .cockpit > nav {
+    display: none !important;
+  }
+  .cockpit > #intelligence {
+    display: block !important;
+    margin: 0;
+  }
+  .cockpit > #intelligence > .section-title,
+  #intelligence > details > summary,
+  .nemotron-panel {
+    display: none !important;
+  }
+  .intelligence-grid {
+    display: block;
+  }
+  .handoff {
+    display: block;
+    box-shadow: none;
+    border: 0;
+    padding: 12mm;
+    width: 100%;
+    break-inside: avoid;
+  }
+  #intelligence > details {
+    display: block;
+  }
+  #intelligence > details > * {
+    visibility: visible;
+  }
+  .handoff .copy-status {
+    display: none;
+  }
+  .numbered-section {
+    content-visibility: visible;
+    contain: none;
+  }
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

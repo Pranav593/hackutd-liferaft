@@ -60,9 +60,12 @@ npm ci
 LIFERAFT_COCKPIT_JOB=campus-button-05 npm run dev
 ```
 
-Open [the local cockpit](http://127.0.0.1:3000). The topology highlights the
-selected event's route. Use the flight recorder to switch between milestones and
-all events, inspect evidence, and rerun journal verification.
+Open [the local cockpit](http://127.0.0.1:3000). The cockpit follows the [authoritative cockpit plan](docs/COCKPIT_PLAN.md).
+Use the four rescue beats, replay scrubber, keyboard shortcuts, linked loss/epoch
+views and Inspector to inspect evidence. Re-verify reruns the Python verifier.
+The Handoff Brief supports text/Markdown copy and paper-only printing.
+See [cockpit operation and QA](docs/COCKPIT_IMPLEMENTATION.md) for setup, demo
+bookmarks, graphics fallback and observed acceptance results.
 
 The console shows saved evidence and listens on loopback. The campus export has
 one measured loss point. To see a full local curve, run the local failover demo
@@ -78,7 +81,9 @@ LIFERAFT_COCKPIT_JOB=local-job LIFERAFT_COCKPIT_LOCAL_RUN=.liferaft/phase2-REPLA
 tool evidence against the journal before showing it. On PowerShell, set each
 variable with `$env:NAME = "value"` before running `npm run dev`.
 
-`npm run typecheck` and `npm run build` check the console. Use `npm start` after
+`npm run typecheck`, `npm run test:contracts`, `npm test`, and `npm run build`
+check the console. With a configured production server running, `npm run test:e2e`
+runs browser checks. Use `npm start` after
 building, with the same environment variables. A custom Python executable can
 be selected using `LIFERAFT_COCKPIT_PYTHON`. Keep evidence files private and
 serve the console locally.

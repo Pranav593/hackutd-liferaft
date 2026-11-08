@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["tests/fixtures.contract.ts", "src/lib/replay.ts", "src/lib/contracts.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,5 +1,5 @@
-import { Cockpit } from "../components/cockpit"
+import { CockpitApp } from "../components/app/CockpitApp";
 
 export default function Home() {
-  return <Cockpit />
+  return <CockpitApp />;
 }

@@ -30,4 +30,6 @@ P0: hardware safety → deterministic checkpoint/restart → cloud coordinator s
 State (1) chosen architecture in plain English, (2) which phase you are starting, (3) commands you will execute automatically, and (4) only unavoidable human actions with exact instructions. Then implement Phase 0 and Phase 1 fully without waiting for human feedback, and update the tracker.
 
 ## Upscale addendum (read after the rules above)
-Presentation and idea polish are first-class for the hackathon. Read `docs/UPSCALE_PLAN.md` and `docs/UI_DESIGN_SYSTEM.md`. `web/demo/index.html` is the visual reference; port its tokens, motion and the 5-node WebGL topology into the Next.js console. New features: provenance badges, hash-chained events (`prev_hash`), Lifeboat Score, Rescue Drill mode, Handoff Brief. These never override the honesty and safety rules above.
+UI source of truth is `docs/COCKPIT_PLAN.md`.
+Read that plan for the read-only replay console, visual system and acceptance gates.
+Hardware, recovery authority, provenance and safety rules above remain mandatory.

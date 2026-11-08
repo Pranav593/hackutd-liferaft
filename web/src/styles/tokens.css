@@ -1,0 +1,38 @@
+@layer tokens {
+  :root {
+    color-scheme: dark;
+    --bg-0: #060b16;
+    --bg-1: #0a1222;
+    --glass: rgba(22, 35, 61, 0.62);
+    --glass-raised: rgba(26, 42, 72, 0.96);
+    --hairline: rgba(160, 190, 230, 0.14);
+    --ctl-border: #62779c;
+    --ink: #eaf0fb;
+    --ink-2: #aebbd3;
+    --ink-3: #8a9ab6;
+    --teal: #5ff0d6;
+    --teal-dim: #35c3ad;
+    --amber: #ffb84d;
+    --red: #ff7c96;
+    --blue: #8db4ff;
+    --violet: #c7a8ff;
+    --on-fill: #04101c;
+    --paper: #eeebe3;
+    --paper-ink: #0b1426;
+    --paper-muted: #4a5568;
+    --r-panel: 22px;
+    --r-ctl: 12px;
+    --r-stage: 28px;
+    --gap-section: 96px;
+    --pad-panel: 24px;
+    --font-sans: var(--font-geist), system-ui, sans-serif;
+    --font-serif: var(--font-instrument), Georgia, serif;
+    --font-mono: var(--font-geist-mono), Consolas, monospace;
+  }
+  @media (max-width: 899px) {
+    :root {
+      --gap-section: 56px;
+      --pad-panel: 18px;
+    }
+  }
+}

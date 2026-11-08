@@ -2,17 +2,25 @@
 
 Devpost needs: title, description, repo, tracks, demo video (**max 2 min, demo only**). Final edits lock **Sun Nov 8, 12:00pm CST**; team must be registered on Devpost by **11pm Sat Nov 7**.
 
-## Video script (â‰ˆ120 s)
-| Time | Shot | Say |
-|---|---|---|
-| 0:00-0:12 | Cockpit hero, orbiting nodes | "AI jobs die with their servers. LIFERAFT saves the work and hands it to another machine." |
-| 0:12-0:30 | Loss curve running, checkpoints committing, badges MEASURED | "A real PyTorch job on a Raspberry Pi checkpoints to private storage, each one SHA-256 verified." |
-| 0:30-0:50 | Physical button press on ESP32, OLED reads TEST | "Our ESP32 sensor board sends a labeled drill. We never overheat anything; the badge says INJECTED." |
-| 0:50-1:15 | Rescue timeline, epoch 4 to 5, resume at K+1 | "A deterministic controller fences the old owner, a laptop verifies the checkpoint and resumes. Recovery time is measured, not claimed." |
-| 1:15-1:40 | Nemotron trace, then Photon chat STATUS/WHY | "Nemotron investigates with read-only tools and writes the handoff brief. Photon keeps the on-call engineer in the loop." |
-| 1:40-2:00 | Lifeboat Score, Verify chain | "Before any incident, Lifeboat Score shows work at risk. Every event is hash-chained. Keep the world running." |
+## Video script (saved-evidence cockpit, about 110 seconds)
 
-Record the real run if available; otherwise record the cockpit in sim mode and say "simulated replay" aloud.
+Only describe the selected journal. Never claim the recorded local fixture is
+cross-device or the button drill is genuine overheating.
+
+| Time | Show | Say |
+|---|---|---|
+| 0:00–0:10 | Headline and four beats | "Training survived. This is saved evidence, and here is the proof." |
+| 0:10–0:30 | First event, then Play | "Every packet is backed by a recorded event. The amber event is an injected drill." |
+| 0:30–0:50 | Recovery proof, epochs and measured loss | "The checkpoint step and first resumed optimizer step are recorded separately. This local replay uses two processes on one machine." |
+| 0:50–1:10 | Filter Injected; inspect event and chain | "The source stays visible. Hash prefixes link to the journal; a legacy export has no export-head anchor." |
+| 1:10–1:30 | Nemotron evidence or its no-data state | "Advisory investigation is separate from deterministic proof. Missing evidence stays unknown." |
+| 1:30–1:50 | Handoff Brief, Copy / Print, Operators | "A concise shift handoff. Photon receipts and live readiness are not fabricated in a replay." |
+
+For a verified cross-laptop export, explicitly identify its job and recorded
+workers. Use its actual displayed steps and timings, not numbers from another
+run. Current setup, bookmark instructions and observed QA are in
+[COCKPIT_IMPLEMENTATION.md](COCKPIT_IMPLEMENTATION.md). No simulated control mode
+exists in the read-only cockpit.
 
 ## Devpost description skeleton
 Problem (data-center handoffs and lost progress) > What it does > How we built it (ESP32, Pi 5, PyTorch, lease fencing, Nemotron tools, Photon) > Honest limits (checkpoint-aware workloads, drill not real overheating) > What's next.
