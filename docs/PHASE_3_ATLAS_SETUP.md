@@ -1,0 +1,113 @@
+# Phase 3 setup for two laptops
+
+Liferaft runs the coordinator on Render and stores job state and private checkpoint bytes in MongoDB Atlas. Each laptop connects to Render over HTTPS. Only the Render service connects to Atlas. You need two laptops for the final proof and no Pi, ESP32, inbound port, or router change.
+
+## 1. Create the Atlas project now
+
+1. Sign in to [MongoDB Atlas](https://cloud.mongodb.com/) and create a project named `Liferaft` in a team-controlled organization. If you already have a dedicated Liferaft project, reuse it.
+2. Choose **Database → Create** or **Build a Cluster**. Select **Free**, name it `liferaft-demo`, and choose a nearby US region. Skip sample data. Confirm the Free tier before creating.
+3. Under **Security → Database & Network Access → Database Users**, add a password user named `liferaft-coordinator`. Use a strong random alphanumeric password and save it in your password manager. Under **Specific Privileges**, select the database role `readWrite` for database `liferaft` only. Restrict the user to the `liferaft-demo` cluster if Atlas offers the toggle. If Atlas created a broad setup user for this project, use the scoped user for the service.
+4. From the cluster, open **Connect → Drivers → Python**. Copy the `mongodb+srv://…` URI and replace the username and password placeholders with this database user's credentials. Keep it private in your password manager until step 3. The URI is only for Render.
+5. Confirm the cluster is available and the scoped user is listed. If the connection wizard asks you to add a network entry now, leave it pending and return after Render supplies its IP ranges. Avoid an all-addresses entry such as `0.0.0.0/0`.
+
+If you lack project permissions, ask the team’s Atlas project owner to complete these steps. If the Free tier is unavailable in the selected region, choose another US region where it is offered. The local demo still runs during cloud setup.
+
+Sources [Atlas Free cluster setup](https://www.mongodb.com/docs/atlas/tutorial/deploy-free-tier-cluster/) · [Atlas database user roles](https://www.mongodb.com/docs/atlas/tutorial/create-mongodb-user-for-cluster/) · [Python driver URI](https://www.mongodb.com/docs/atlas/driver-connection/)
+
+## 2. Publish the Phase 3 code and create three device credentials
+
+Use GitHub Desktop to create a branch such as `phase-3-atlas-coordinator`, commit the Phase 3 changes, and click **Publish branch**. Confirm GitHub shows the root `Dockerfile` on that branch. Render can deploy directly from the branch while you verify it.
+
+On Laptop A, open Terminal in the repo and create three separate local profiles. The command below is for macOS or Linux. It refuses to overwrite an existing profile.
+
+```sh
+python3 - <<'PY'
+import os
+from pathlib import Path
+import secrets
+
+os.umask(0o077)
+for role in ("operator", "primary", "standby"):
+    path = Path(f".env.{role}")
+    with path.open("x") as stream:
+        stream.write("LIFERAFT_CLOUD_URL=\n")
+        stream.write(f"LIFERAFT_CLOUD_TOKEN={secrets.token_hex(32)}\n")
+    print(f"Created {path.name}")
+PY
+git check-ignore .env.operator .env.primary .env.standby
+```
+
+You should see all three filenames from `git check-ignore`. Open each file in your editor and copy the token value only when setting the matching Render variable. Keep them out of Git, chat, screenshots and shell command arguments. If the files already exist, keep the existing matching values or deliberately rotate all affected settings. Share only the standby credential with Laptop B using a password manager's private sharing feature.
+
+## 3. Create the Render service
+
+1. Sign in to [Render](https://dashboard.render.com/). Choose **New → Web Service**. Connect GitHub and grant access to `Pranav593/hackutd-liferaft`. Select the branch from step 2.
+2. Set **Name** to `liferaft-coordinator` (add a suffix if taken), **Language** to **Docker**, **Instance Type** to **Free**, and choose a US region near Atlas. Leave **Root Directory** and **Docker Command** blank. If a Dockerfile path is requested, use `./Dockerfile`. Set **Health Check Path** to `/healthz`.
+3. In **Environment Variables**, add the five entries below, then deploy. Keep auto-deploy off during the drill if you expect further pushes.
+
+| Key | Value |
+|---|---|
+| `LIFERAFT_ATLAS_URI` | The completed private Atlas driver URI |
+| `LIFERAFT_PRIMARY_TOKEN` | Token from `.env.primary` |
+| `LIFERAFT_STANDBY_TOKEN` | Token from `.env.standby` |
+| `LIFERAFT_OPERATOR_TOKEN` | Token from `.env.operator` |
+| `LIFERAFT_ENABLE_DRILLS` | `1` to allow the injected cooling drill |
+
+4. In the new Render service, choose **Connect → Outbound** and copy all listed CIDR ranges. In Atlas, go to **Security → Database & Network Access → IP Access List → Add IP Address**. Add each range separately and wait until the entries are active. The worker laptops' IP addresses are unnecessary.
+5. Wait for Render to show **Live**. Open the public service origin with `/healthz` appended. The expected response is `{"ready": true}`, which confirms the web process is up. The authenticated doctor below checks Atlas connectivity. If Free Render went idle, open the health URL and allow the service to wake before starting the workers.
+
+If Render cannot see the repo, grant that repo access in the Render GitHub app settings. If Atlas auth fails, compare the URI placeholders, database user, and Render outbound CIDRs in their dashboards. If the host remains unavailable, run the local demo while diagnosing it. Keep the service on the Free tier.
+
+Sources [Docker deploys](https://render.com/docs/docker) · [Render Free limits](https://render.com/docs/free) · [Environment variables](https://render.com/docs/configure-environment-variables) · [Outbound IP ranges](https://render.com/docs/outbound-ip-addresses)
+
+## 4. Verify recovery on two laptops
+
+Both laptops need the Phase 3 branch and the Python and CPU PyTorch setup in [README.md](../README.md). Verify `doctor --training --json --redact` reports `cpu_verified: true` on each. Keep both laptop clocks set automatically. On Windows use `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+
+Fill in `LIFERAFT_CLOUD_URL` in the profiles with the same public Render origin, for example `https://liferaft-coordinator.onrender.com`. On Laptop B, create only `.env.standby` using that URL and the standby token. Laptop A needs `.env.operator` and `.env.primary`.
+
+Run these checks. The expected response is `auth: true`, `database: true`, and the matching role.
+
+```sh
+# Laptop A
+.venv/bin/python -m liferaft cloud --profile operator doctor
+.venv/bin/python -m liferaft cloud --profile primary doctor
+
+# Laptop B
+.venv/bin/python -m liferaft cloud --profile standby doctor
+```
+
+Then run the drill.
+
+1. **Laptop A, operator terminal.** Create the job. Use a fresh name for each attempt and substitute it in every command.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile operator create --job campus-drill-01
+   ```
+
+2. **Laptop B.** Start the standby and leave it running.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile standby worker --role standby --job campus-drill-01
+   ```
+
+3. **Laptop A, separate terminal.** Start the primary.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile primary worker --role primary --job campus-drill-01
+   ```
+
+4. **Laptop A, operator terminal.** Once the primary reaches at least step 20 and while it is still running, request the injected drill.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile operator rescue --job campus-drill-01
+   .venv/bin/python -m liferaft cloud --profile operator status --job campus-drill-01
+   ```
+
+5. On Laptop B, look for `STANDBY_CHECKPOINT_RESTORED` followed by `TRAINING_STEP_COMPLETED` at the checkpoint step plus one. Once Laptop B finishes, rerun status. The expected fields are `state: COMPLETED`, `owner: laptop-standby`, `epoch: 2`, and `last_step: 200`. Export the redacted timeline to the ignored local state directory.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile operator events --job campus-drill-01 > .liferaft/campus-drill-01.jsonl
+   ```
+
+The event export should show `chain_valid: true`, an injected `RESCUE_REQUESTED`, and `FIRST_RESUMED_STEP_COMPLETED` with the same checkpoint SHA-256. Keep the terminal output from both laptops for the evidence record. If a worker exits or a drill is missed, stop the worker processes in their own terminals with Ctrl+C and retry with a fresh job ID. The offline fallback is `.venv/bin/python -m liferaft demo --scenario cooling-test`.

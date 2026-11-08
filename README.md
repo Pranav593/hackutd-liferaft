@@ -61,3 +61,7 @@ From the project folder, run either scenario in the same environment that passed
 - **Worker crash.** The command stops the dedicated primary training child process it launched. The standby waits for the primary's 12-second lease to expire, then continues from the last valid committed checkpoint. Recovery time in the report starts at detection, which occurs at lease expiry. Lost steps appear as `null` when the primary could not report its last step.
 
 Success prints `LOCAL_RECOVERY_VERIFIED` with `owner: local-standby`, `epoch: 2` and `last_step: 70`. The output points to an `evidence.json` file under `.liferaft/phase2-*/`. The same directory holds each worker's loss log and the checkpoint artifacts. Both workers run on this computer, with no network or physical hardware required.
+
+## Hosted recovery across two laptops
+
+See the [Phase 3 Atlas and Render setup guide](docs/PHASE_3_ATLAS_SETUP.md) for the cloud deployment and recovery drill. Live verification status is in the phase tracker.

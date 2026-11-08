@@ -13,9 +13,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from .cloud import CloudClient
 from .config import redact
 
-PUBLIC_TARGETS = {"pypi": "https://pypi.org/", "supabase": "https://supabase.com/"}
+PUBLIC_TARGETS = {"pypi": "https://pypi.org/", "mongodb": "https://www.mongodb.com/"}
 
 
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
@@ -106,8 +107,16 @@ def inspect(*, network: bool, require_pi: bool = False, require_cloud: bool = Fa
         failures.append("64-bit Raspberry Pi 5 not detected")
     if require_training and not cpu_verified:
         failures.append("PyTorch CPU smoke test did not pass")
+    cloud = "not_requested"
     if require_cloud:
-        failures.append("hosted authenticated checks are pending Phase 3")
+        try:
+            client = CloudClient(os.getenv("LIFERAFT_CLOUD_URL", ""), os.getenv("LIFERAFT_CLOUD_TOKEN", ""))
+            cloud = client.call("doctor")
+            if not (cloud.get("auth") is True and cloud.get("database") is True):
+                failures.append("hosted auth or database check failed")
+        except (ValueError, RuntimeError):
+            cloud = "unavailable"
+            failures.append("hosted auth or database check unavailable")
     probes = {name: https_probe(url) for name, url in PUBLIC_TARGETS.items()} if network else {}
     return {
         "mode": "local",
@@ -119,8 +128,9 @@ def inspect(*, network: bool, require_pi: bool = False, require_cloud: bool = Fa
                   "installability": "cpu_smoke_passed" if cpu_verified else "installation_not_verified"},
         "hardware": {"pi_model": model, "serial_ports": ports, "status": "detected_only" if ports else "not_detected"},
         "https_egress": probes or "not_requested",
+        "cloud": cloud,
         "configured": {key: bool(os.getenv(key)) for key in
-                       ("SUPABASE_URL", "LIFERAFT_DEVICE_TOKEN", "NVIDIA_API_KEY", "PHOTON_API_KEY")},
+                       ("LIFERAFT_CLOUD_URL", "LIFERAFT_CLOUD_TOKEN", "NVIDIA_API_KEY", "PHOTON_API_KEY")},
         "critical_failures": failures,
     }
 

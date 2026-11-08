@@ -1,7 +1,7 @@
 """Command-line entry points."""
 import argparse
 
-from . import doctor, scenario
+from . import cloud, doctor, scenario
 from .config import load_environment
 from .training_cli import install_commands
 
@@ -21,5 +21,6 @@ def main() -> int:
     diagnostics.set_defaults(handler=doctor.run)
     install_commands(subcommands)
     scenario.install_commands(subcommands)
+    cloud.install_commands(subcommands)
     args = parser.parse_args()
     return args.handler(args)

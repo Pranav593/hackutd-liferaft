@@ -35,9 +35,12 @@
 - [x] No-valid-checkpoint, race, stale-primary and idempotence tests.
 - **Gate:** real second process finishes training and old primary cannot commit.
 
-### Phase 3 — Cloud coordination for campus-isolated devices — NOT_STARTED
-- [ ] Hosted HTTPS coordinator and MongoDB Atlas set up using verified docs.
-- [ ] Scoped device roles, private Atlas checkpoint storage, immutable artifacts, authenticated transfer.
+### Phase 3 — Cloud coordination for campus-isolated devices — IN_PROGRESS
+- [x] Coordinator, Atlas adapter, outbound HTTPS client and Render Docker configuration implemented.
+- [ ] Deploy the service and verify authenticated Atlas connectivity.
+- [x] Scoped device roles, transfer integrity, and stale-owner rejection pass offline API tests.
+- [ ] Add signed transfer URLs and complete the cloud doctor lease, transfer, and integrity checks.
+- [ ] Verify immutable checkpoint writes and transaction rollback against live Atlas.
 - [ ] Atomic lease claim/yield/reject stale epoch and cloud health checks.
 - [ ] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
 - [ ] Deny anonymous/untrusted reads and fake device writes.
@@ -111,7 +114,7 @@
 | Confirm 64GB microSD and card reader are still available | Pi OS boot | `TEAM_SETUP_GUIDE.md` §7 | NOT_CHECKED |
 | Identify exact fan model and ESP32 USB connector | electrical safety | `HARDWARE_SAFETY_AND_WIRING.md` §B | NOT_CHECKED |
 | Check DS18B20 sensor type and presence of 4.7kΩ resistor | avoid wrong wiring | `HARDWARE_SAFETY_AND_WIRING.md` §B/C | NOT_CHECKED |
-| Team MongoDB Atlas project account (Phase 3) | hosted coordination and checkpoint storage | Atlas setup guide pending Phase 3 | NOT_CHECKED |
+| Team MongoDB Atlas project account (Phase 3) | hosted coordination and checkpoint storage | `docs/PHASE_3_ATLAS_SETUP.md` §§1–4 | PENDING |
 | NVIDIA Build account/key (when Phase 7 needs it) | live tool-using agent | `TEAM_SETUP_GUIDE.md` §5 | NOT_CHECKED |
 | Photon project/channel and consenting operator (Phase 8) | real messaging | `TEAM_SETUP_GUIDE.md` §6 | NOT_CHECKED |
 | Compatible ESP32 USB data cable | flash/read serial | `TEAM_SETUP_GUIDE.md` §8 | NOT_CHECKED |
@@ -189,3 +192,12 @@
 - `.venv/bin/python -m liferaft demo --scenario worker-crash` resumed from checkpoint 20 at step 21. Detection to resume was 0.707 s, trigger to resume was 12.206 s, and lost steps were unknown. Checkpoint SHA-256 `5b2dfdf045301bd823848cd432e8ed818e20e3335fabaa898a0ce9d87ba61883`. Evidence `.liferaft/phase2-df10wcse/evidence.json`.
 - This gate covers one handoff on one Mac using a shared local artifact directory. Atlas, cross-device HTTPS, network partitions and physical hardware are outside this proof. No human action was needed for Phase 2.
 - Next phase. Use MongoDB Atlas for hosted job ownership and private checkpoint storage, with a separately hosted HTTPS coordinator. The team selected Atlas before cloud implementation. Phase 3 will align the earlier Supabase-specific handoff documentation with that choice and verify the hosted path.
+
+### 2026-11-08 UTC — Phase 3 — IN_PROGRESS
+
+- Added the Atlas adapter, hosted WSGI API, outbound HTTPS worker and operator commands, pinned cloud requirements, Docker configuration, and offline API tests. Updated the worker transport seam, diagnostics, master and interface documentation, runbook, setup guide, and environment template.
+- Selected Render's Docker Web Service as the initial host. Workers use one token per role and never connect to Atlas. The API runs the existing bounded SQLite policy against a disposable per-job snapshot. Atlas stores that snapshot separately from immutable checkpoint bytes and publishes accepted updates in one majority-write snapshot transaction. Concurrent writes to the same job are retried against fresh state within a five-second operation budget. This keeps the local and hosted policy in one implementation. Whole-job snapshots and the dedicated two-worker deployment are deliberate demo limits.
+- `.venv/bin/python -m unittest discover -s tests -v` passed 21 tests in 42.216 s. The offline API exercised missing credentials, wrong roles, stale request timestamps, corrupt bytes, private transfer, valid lease handoff, old-epoch rejection, and the audit chain. The API test used fixture bytes and a local repository, while the existing local training tests ran real PyTorch. The 200-step local run again resumed at step 121 with a maximum loss difference of 0. The targeted foundation and cloud suites passed after follow-up edits.
+- `.venv/bin/python -m compileall -q liferaft tests`, `./node_modules/.bin/tsc --strict --noEmit web/src/lib/contracts.ts`, `git diff --check`, and `git check-ignore -v .env.primary .env.standby .env.operator` passed. Cloud doctor correctly refused to run without a configured coordinator URL.
+- The Docker daemon was unavailable. Render deployment, Atlas driver connectivity and transactional behavior, and physical two-laptop recovery are unverified. No hardware changes. The current API uses authenticated coordinator-mediated transfer and rejects requests older than 30 seconds. Expiring signed URLs and the active cloud doctor lease, transfer and integrity checks remain Phase 3 work.
+- Team action. Follow `docs/PHASE_3_ATLAS_SETUP.md` to create the Free Atlas cluster and database-scoped user, publish the code branch, configure the Render service and its allowlisted egress, and provision the two laptops. Secrets stay in the password manager, Render settings, and the intended device's ignored profile. Next is the hosted auth smoke test followed by the two-laptop injected drill. Retain the local Phase 2 demo as the fallback.

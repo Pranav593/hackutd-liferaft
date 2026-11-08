@@ -12,7 +12,8 @@ from .workload import TrainingSession
 
 
 def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job_id: str,
-               worker_id: str, role: str, step_sleep: float, timeout: float) -> None:
+               worker_id: str, role: str, step_sleep: float, timeout: float,
+               poll_s: float = 0.25, fetch_checkpoint=None) -> None:
     spec = coordinator.get_spec(job_id)
     deadline = time.monotonic() + timeout
     candidate = None
@@ -30,7 +31,8 @@ def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job
                 next_registration = time.monotonic() + HEARTBEAT_S
             for offered in coordinator.checkpoint_candidates(job_id, worker_id):
                 try:
-                    session, candidate = restore(store.path_for(offered.path), job_id=job_id,
+                    path = fetch_checkpoint(offered) if fetch_checkpoint else store.path_for(offered.path)
+                    session, candidate = restore(path, job_id=job_id,
                                                  run_id=spec.run_id, seed=spec.seed,
                                                  trusted_manifest=offered)
                 except (IntegrityError, OSError):
@@ -42,7 +44,7 @@ def run_worker(coordinator: WorkerCoordinator, store: LocalArtifactStore, *, job
                 candidate = None
             if candidate is not None:
                 break
-            time.sleep(0.25)
+            time.sleep(poll_s)
         else:
             raise TimeoutError("standby deadline reached without a verified checkpoint lease")
         log("STANDBY_CHECKPOINT_RESTORED", worker_id=worker_id, job_id=job_id, step=session.step,

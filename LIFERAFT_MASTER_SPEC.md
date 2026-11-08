@@ -116,11 +116,11 @@ Laptop B Next.js console <--HTTPS / realtime or polling----------- hosted APIs
                   +--- Photon two-way messaging adapter --------+
 ```
 
-**Preferred cloud foundation:** Supabase hosted Postgres (events, leases, checkpoints, incidents) + private Storage (checkpoints) + Edge Functions as a secure device-facing API/coordinator. One Next.js dashboard can be hosted or run locally, but it reads cloud state via authenticated APIs. A separate Python FastAPI service is *not* required in cloud mode. Use minimal backend surface area and verify the latest Supabase CLI, Storage and security instructions against official docs. This resolves school Wi-Fi isolation: all clients independently initiate outbound TLS connections.
+**Cloud foundation:** MongoDB Atlas stores job state and private checkpoints. A hosted Python HTTPS coordinator runs the same recovery policy as the local adapter. The dashboard reads scoped coordinator APIs. Workers on campus Wi-Fi independently initiate outbound TLS connections.
 
 **Important implementation choice:** Pi 5's own Wi-Fi is sufficient for the preferred plan if a network it can join grants internet. If campus enterprise Wi-Fi or client policies interfere, use an approved personal hotspot/private router. No Ethernet cable is necessary for the cloud design. USB cable provides the primary ESP32 telemetry path so its Wi-Fi credentials are optional.
 
-**Security outline:** Each device has distinct scoped credentials; cloud function validates identity and payload. Supabase service/admin secret lives **only in hosted functions**. Private bucket objects use immutable paths; short-lived signed upload/download URLs are issued after device authorization. Dashboard is read-only by default and uses properly scoped auth/RLS. Operator commands require explicit authenticated roles. Never place a long-lived secret in browser JavaScript or ESP32 firmware.
+**Security outline:** Each device has a distinct scoped credential. The coordinator validates identity and payload. The Atlas connection URI stays in the hosted runtime. Checkpoints use immutable paths and short-lived scoped transfer URLs. Dashboard access is read-only by default. Operator commands require an authenticated operator. Keep long-lived secrets out of browser JavaScript and ESP32 firmware.
 
 **Local development:** Build `LocalCoordinator`/`LocalArtifactStore` using SQLite + filesystem with the *same typed interface* as cloud. It simulates remote APIs only for testing; the real distributed demonstration must pass using cloud mode. No Docker dependency required.
 
@@ -156,7 +156,7 @@ liferaft/
       coordinator/
         interface.py
         local_sqlite.py
-        supabase_http.py
+        cloud_http.py
         leases.py                # epoch/fencing and expiry logic
         checkpoint_commit.py
       agents/
@@ -193,7 +193,7 @@ liferaft/
       e2e/
         test_two_workers.py
   cloud/
-    supabase/
+    cloud/
       config.toml
       migrations/
       functions/
@@ -279,7 +279,7 @@ Do not promise impossible exactly-once execution during partitions. Explicitly h
 
 ### 7.3 Checkpoint transfer
 
-Preferred store: Supabase private object bucket; key path `runs/{run_id}/checkpoints/{step}-{uuid}.pt`. Upload with time-limited signed URL, no upsert. On the server enforce declared file size caps and metadata; on commit, verify checksum and object existence (small demo checkpoints permit end-to-end bytes check). Store states `PREPARING / UPLOADING / STORED / VERIFIED / COMMITTED / REJECTED`. A standby may only restore `COMMITTED` checkpoint metadata whose object it downloads and verifies again. Keep previous good checkpoints on failures.
+Preferred store: private Atlas checkpoint collection; key path `runs/{run_id}/checkpoints/{step}-{uuid}.pt`. Upload with a time-limited signed URL and no upsert. On the server enforce declared file size caps and metadata; on commit, verify checksum and object existence (small demo checkpoints permit end-to-end bytes check). Store states `PREPARING / UPLOADING / STORED / VERIFIED / COMMITTED / REJECTED`. A standby may only restore `COMMITTED` checkpoint metadata whose object it downloads and verifies again. Keep previous good checkpoints on failures.
 
 ### 7.4 Metrics (all actually measured)
 
@@ -382,12 +382,12 @@ Build one excellent screen rather than many generic pages. It must show *real* s
 9. **Demo controls** hidden/disabled in production mode: `Inject cooling emergency`, `Simulate sensor dropout`, `Run worker crash test` (latter only kills dedicated training process with explicit scoped confirmation). Each control sends a labeled injected event to backend; never directly powers down physical devices.
 10. **A scenario replay** loads historical *observed* events into read-only UI for repeatability; never visually conflates replay with live data.
 
-Data update by short polling (1–2 seconds) or supported Supabase Realtime if reliable. No CSS animation can change authoritative data. Show loading/error/stale statuses.
+Data updates by short polling (1–2 seconds). No CSS animation can change authoritative data. Show loading/error/stale statuses.
 
 ## 12. Security and reliability requirements
 
 - All coordinated state changes occur through an authenticated hosted endpoint; enforce per-device roles and server-side validation. No admin token on ESP32, Pi code firmware, or browser.
-- Supabase RLS enabled for exposed tables, private checkpoint bucket, separate device credentials/roles and scoped queries. Store credentials only in `.env` / hosted secrets; redact logs.
+- Atlas is private to the hosted coordinator, with separate device credentials and scoped API requests. Store credentials only in `.env` / hosted secrets; redact logs.
 - Idempotent event IDs and leases; no retries that accidentally execute a rescue twice.
 - Timeout and backoff on cloud calls; no infinite loops, no excessive checkpoint uploads, finite local disk quota and retention policy **limited to LIFERAFT owned paths**.
 - Failover policy needs a committed checksum-verified checkpoint and healthy standby before marking a rescue successful.
@@ -403,7 +403,7 @@ Codex must complete a phase with tests, user-visible working demo and tracker up
 
 ### PHASE 0 — Foundation, hardware/network inventory, contracts
 
-**Build:** repo scaffold, package lockfiles, `liferaft doctor` command, Pydantic/TypeScript shared protocol docs, environment loader, structured logging, local SQLite coordinator, fixture generators and readme. `doctor` shows OS, Python version, CPU architecture, PyTorch installability, network egress (`HTTPS` only), device readiness, disk space and whether hardware ports are present **without modifying hardware**. Add `--json`, `--redact`, and a nonzero exit status for critical failures. It may probe Supabase/NVIDIA/Photon only when keys are configured, read-only and bounded.
+**Build:** repo scaffold, package lockfiles, `liferaft doctor` command, Pydantic/TypeScript shared protocol docs, environment loader, structured logging, local SQLite coordinator, fixture generators and readme. `doctor` shows OS, Python version, CPU architecture, PyTorch installability, network egress (`HTTPS` only), device readiness, disk space and whether hardware ports are present **without modifying hardware**. Add `--json`, `--redact`, and a nonzero exit status for critical failures. It may probe Atlas-backed coordinator/NVIDIA/Photon only when keys are configured, read-only and bounded.
 
 **Specific tests:** schema parse round-trip; invalid timestamps/replayed event rejected; redaction; local SQL mode works without internet; no direct LAN dependency. **Exit:** `uv run pytest` (or documented pinned equivalent) passes; `liferaft doctor` works on one laptop and doesn't print secrets.
 
@@ -421,9 +421,9 @@ Codex must complete a phase with tests, user-visible working demo and tracker up
 
 ### PHASE 3 — Hosted cloud coordinator and private storage
 
-**Build:** Supabase project migration, private storage bucket, Edge Function coordinator endpoints, device token/role model, scoped signed URLs, atomic SQL claim/renew/expire/yield functions, checkpoint commit/verify, status query, events, health checks. Worker uses the same outbound HTTPS client whether on Pi or laptop; no local inbound socket required. Implement `cloud doctor` with four checks: auth, lease, upload/download, integrity. Operator UI token scope separate from workers.
+**Build:** Atlas project, private checkpoint collection, hosted coordinator endpoints, device credentials, signed expiring transfer URLs, atomic claims and renewals, checkpoint verification, status, events, and a cloud doctor. Workers make outbound HTTPS calls and require no local inbound socket. Keep operator scope separate from workers.
 
-**Tests:** both laptops can reach service independently despite direct ping failure; edge auth rejects wrong tokens; RLS denies anonymous reads; genuine immutable checkpoint transfer; two simultaneous claims choose one; stale epoch rejected; retry/upload failure rollback. **Exit:** actual cross-laptop restore over cloud HTTPS, documented exact request/response (redacted) and no direct peer connection.
+**Tests:** both laptops can reach service independently despite direct ping failure; coordinator auth rejects wrong tokens and anonymous reads; genuine immutable checkpoint transfer; two simultaneous claims choose one; stale epoch rejected; retry/upload failure rollback. **Exit:** actual cross-laptop restore over cloud HTTPS, documented exact request/response (redacted) and no direct peer connection.
 
 ### PHASE 4 — Raspberry Pi 5 bring-up and real heterogenous worker
 
@@ -476,7 +476,7 @@ Codex must complete a phase with tests, user-visible working demo and tracker up
 ## 14. Work splits when multiple developers are coding
 
 - **Compute engineer:** Phases 1/2, checkpoint schema, Python worker, Pi runtime.
-- **Cloud engineer:** Phase 3, SQL leases, private storage, auth, integration tests.
+- **Cloud engineer:** Phase 3, transactional leases, private storage, auth, integration tests.
 - **Embedded engineer:** Phase 5, board identification, firmware, serial bridge, OLED and DS18B20 safe wiring.
 - **Operator experience engineer:** Phase 7/8/9, Nemotron/Photon adapters, UI. Shared typed contract must be merged before parallel branches.
 
@@ -509,9 +509,9 @@ Check current official docs **before installing libraries or writing live API ca
 - DS18B20 official datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/DS18B20.pdf
 - PyTorch local start: https://pytorch.org/get-started/locally/
 - PyTorch serialization: https://pytorch.org/docs/stable/notes/serialization.html
-- Supabase Storage and RLS: https://supabase.com/docs/guides/storage/security/access-control
-- Supabase signed URLs: https://supabase.com/docs/guides/storage/serving/downloads
-- Supabase Edge Functions: https://supabase.com/docs/guides/functions
+- Atlas database access: https://www.mongodb.com/docs/atlas/connect-to-database-deployment/
+- PyMongo transactions: https://www.mongodb.com/docs/languages/python/pymongo-driver/current/crud/transactions/
+- Docker deployment: https://render.com/docs/docker
 - NVIDIA available Nemotron models: https://build.nvidia.com/search/models?q=Nemotron
 - Photon 2.0 official API reference: https://photon.codes/docs/beta/api-reference
 - Photon overview: https://photon.codes/blog/introducing-photon-2.0
