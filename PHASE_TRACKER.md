@@ -37,12 +37,12 @@
 
 ### Phase 3 — Cloud coordination for campus-isolated devices — IN_PROGRESS
 - [x] Coordinator, Atlas adapter, outbound HTTPS client and Render Docker configuration implemented.
-- [ ] Deploy the service and verify authenticated Atlas connectivity.
+- [x] Deploy the service and verify authenticated Atlas connectivity.
 - [x] Scoped device roles, transfer integrity, and stale-owner rejection pass offline API tests.
 - [ ] Add signed transfer URLs and complete the cloud doctor lease, transfer, and integrity checks.
 - [ ] Verify immutable checkpoint writes and transaction rollback against live Atlas.
 - [ ] Atomic lease claim/yield/reject stale epoch and cloud health checks.
-- [ ] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
+- [x] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
 - [ ] Deny anonymous/untrusted reads and fake device writes.
 - **Gate:** actual cross-laptop recovery needs **no inbound campus-LAN access**.
 
@@ -232,3 +232,11 @@
 - `cloud --profile operator create --job campus-drill-01` failed locally because the CLI omitted the required workload configuration fingerprint. It failed before sending the job request. `liferaft/cloud.py` now includes the workload's existing `CONFIG_FINGERPRINT` in `JobSpec`.
 - `.venv/bin/python -m unittest discover -s tests -p test_cloud.py -k create_cli -v` reproduced the missing-field failure before the fix. After the fix, the cloud suite passed 4/4, including CLI creation through the real WSGI handler with local persistence and a worker readback of the fingerprint. `.venv/bin/python -m unittest discover -s tests -v` passed 23/23 in 43.861 s. `git diff --check` passed.
 - Retry the same create command from Laptop A. The CLI-only fix does not require a Render redeploy or a change on Laptop B. A live Atlas job write and the two-laptop drill remain open.
+
+### 2026-11-08 UTC — Phase 3 — Cross-laptop crash recovery verified
+
+- For `campus-drill-01`, the shared terminal logs show CPU PyTorch verified on Laptop A (macOS ARM64) and Laptop B (Windows AMD64). All three role doctors authenticated and reached Atlas, and the operator created the job with Laptop B registered as standby.
+- Laptop A committed checkpoint step 70 under epoch 1 and printed real training through step 78 before a `KeyboardInterrupt`. The operator requested the injected cooling drill, and the event export records `PRIMARY_UNREACHABLE` and `LEASE_EXPIRED`. This was recovery after a primary worker interruption.
+- Laptop B restored step 70 with SHA-256 `fb0d9c1950044c48687708d066ef04729485fb672a4f735dcc3d138e5ab550ce`, matching Laptop A's committed checkpoint and the coordinator's transfer and resume evidence. It advanced to step 71 under epoch 2 and the supplied Windows log records training through step 183. Coordinator detection to first resumed step was 14.384 s. Coordinator-reported lost progress is unknown because there was no graceful yield.
+- Independently recomputed and matched all 46 event hashes in `.liferaft/campus-drill-01.jsonl` using the coordinator's canonical encoding. That export ends at step 120, and the latest supplied status is `VERIFIED_RESUMED`. A new `cloud --profile operator status --job campus-drill-01` call from the execution shell returned coordinator unavailable. Next evidence is the final status from Laptop A's normal Terminal with `state: COMPLETED`, `owner: laptop-standby`, `epoch: 2` and `last_step: 200`. No hardware action was taken.
+- Laptop A subsequently reported `state: FAILED`, owner `laptop-standby`, epoch 2, last recorded step 180 and no active lease. The watchdog transitions a resumed job to `FAILED` when its standby lease expires. A manual standby termination is consistent with the result, but the shared Windows log ends mid-line and does not identify the exit cause. The handoff passed, while the finish-to-step-200 check failed. Retry with a fresh job ID and keep the standby running until the coordinator records completion.
