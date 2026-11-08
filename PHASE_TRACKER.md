@@ -43,6 +43,7 @@
 - [ ] Verify immutable checkpoint writes and transaction rollback against live Atlas.
 - [ ] Atomic lease claim/yield/reject stale epoch and cloud health checks.
 - [x] Two independent computers access cloud over HTTPS; checkpoint round-trip verified.
+- [x] Graceful Mac-to-Windows handoff completed all 200 training steps over hosted HTTPS (`campus-drill-03`).
 - [ ] Deny anonymous/untrusted reads and fake device writes.
 - **Gate:** actual cross-laptop recovery needs **no inbound campus-LAN access**.
 
@@ -331,3 +332,15 @@
 - Validation: `git diff --check`. Documentation-only change; no additional
   firmware tests or full regression rerun required. Earlier 26-test publication
   and real board-only serial evidence remain recorded above.
+
+### 2026-11-08 UTC — Phase 3 — Graceful cross-laptop handoff verified
+
+- `campus-drill-02` records an injected cooling drill, a primary pause request, checkpoint commit and `PRIMARY_YIELDED` at step 30. Windows claimed epoch 2, restored the same SHA-256 verified checkpoint, and completed measured step 31. Detection-to-resume was 6.384 s, with zero steps lost at the handoff.
+- Independently recomputed all 52 event hashes in `.liferaft/campus-drill-02.jsonl`. The exported prefix ends with the standby checkpoint at step 140. The operator reports the standby progressed to step 157 before it was manually stopped. The run proves graceful cloud handoff; completion at step 200 was not observed.
+- For the next run, leave the standby running until it commits the step-200 checkpoint, acknowledges completion and exits. The worker has a 0.4 s delay between steps in addition to network and checkpoint time. A fresh run can preserve the completed first and second drill evidence. `git diff --check` passed for this documentation-only update.
+
+### 2026-11-08 UTC — Phase 3 — Full two-laptop drill passed
+
+- `campus-drill-03` finished `COMPLETED` with `laptop-standby` owning epoch 2 at step 200. The exported events record the injected rescue request, Mac checkpoint commit and graceful yield at step 48, matching SHA-256 through lease transfer, and measured Windows training at step 49. The Windows worker committed the final step-200 checkpoint and recorded `JOB_COMPLETED`.
+- Detection-to-first-resumed-step was 5.398 s, with zero steps lost at handoff. Independently recomputed all 70 hashes in `.liferaft/campus-drill-03.jsonl` and matched the complete event chain. `git diff --check` passed for this documentation-only update.
+- The two-laptop recovery gate is verified. Phase 3 remains in progress for its other unchecked security and live transaction checks.
