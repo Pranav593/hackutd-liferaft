@@ -784,3 +784,18 @@
   3/3 in 0.199 s; test_nemotron.py: 2/2 in 0.128 s; `git diff --check` passed.
 - Tests use synthetic journals, not new live rescue evidence. No provider calls,
   hardware or cloud mutations. Next: read-only cloud readiness diagnostics.
+
+### 2026-11-08 — Autonomous software update 9 — Read-only per-job cloud doctor
+
+- `liferaft cloud --profile operator doctor --job JOB` now checks owner lease,
+  standby freshness, committed checkpoint bytes/hash, journal integrity and drill
+  flag. Returns explicit blocking reasons and checks not performed.
+- Diagnostic never invokes watchdog, renews a lease, records events or transfers
+  ownership. Expired/corrupt data cannot show ready; no checkpoint means no data.
+- Files: failover.py, cloud_api.py, cloud.py, test_readiness.py, test_cloud.py.
+- `.venv` Python: `-m unittest discover -s tests -p test_readiness.py -v` passed
+  2/2 in 0.173 s; latest test_cloud.py passed 9/9 in 4.148 s. CLI `cloud doctor
+  --help` and `git diff --check` passed. Tests compare database bytes before/after
+  expired-lease and corruption diagnostics to prove no state mutation.
+- Hosted doctor/transfer checks remain NOT_RUN. No hardware/provider actions.
+  Next: real PyTorch checkpoint/resume through the full signed API/client path.

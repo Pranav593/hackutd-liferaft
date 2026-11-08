@@ -220,8 +220,7 @@ def install_commands(subcommands):
     for action in ("doctor", "create", "status", "events", "rescue", "worker", "bridge"):
         parser = actions.add_parser(action)
         parser.set_defaults(handler=run)
-        if action != "doctor":
-            parser.add_argument("--job", required=True)
+        parser.add_argument("--job", required=action != "doctor")
         if action == "worker":
             parser.add_argument("--role", choices=tuple(DEVICE_IDS), required=True)
         if action == "bridge":
@@ -233,7 +232,7 @@ def run(args):
         settings = dotenv_values(f".env.{args.profile}", interpolate=False) if args.profile else os.environ
         client = CloudClient(settings.get("LIFERAFT_CLOUD_URL") or "", settings.get("LIFERAFT_CLOUD_TOKEN") or "")
         action = args.action
-        job = None if action == "doctor" else TypeAdapter(Identifier).validate_python(args.job)
+        job = TypeAdapter(Identifier).validate_python(args.job) if args.job else None
         if action == "bridge":
             from .bridge import run_bridge
 

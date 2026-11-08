@@ -245,6 +245,47 @@ class LocalFailover(LocalCoordinator):
             return {**{key: job[key] for key in job.keys() if key != "spec"},
                     "standby_ready": self._ready(db, job, now)}
 
+    def readiness(self, job_id: str) -> dict:
+        """Read-only diagnostic snapshot: never renew, claim or run watchdog."""
+        with self.transaction() as db:
+            now = self.clock()
+            job = self._job(db, job_id)
+            lease_valid = self._owns(job, job["owner"], job["epoch"], now)
+            standby_ready = self._ready(db, job, now)
+            row = db.execute("""SELECT manifest FROM checkpoints WHERE job_id=? AND epoch=?
+                                ORDER BY step DESC LIMIT 1""", (job_id, job["epoch"])).fetchone()
+            checkpoint = None
+            integrity = "no_checkpoint"
+            if row is not None:
+                manifest = CheckpointManifest.model_validate_json(row["manifest"])
+                integrity = "verified"
+                try:
+                    self.store.verified_bytes(manifest)
+                except (IntegrityError, OSError):
+                    integrity = "failed"
+                checkpoint = {"checkpoint_id": manifest.checkpoint_id, "step": manifest.step_completed,
+                              "sha256_prefix": manifest.sha256[:12], "bytes": manifest.size_bytes,
+                              "age_s": max(0.0, now - manifest.committed_utc.timestamp())}
+            reasons = []
+            if job["state"] != "PRIMARY_RUNNING":
+                reasons.append("job_not_primary_running")
+            if not lease_valid:
+                reasons.append("owner_lease_expired_or_absent")
+            if not standby_ready:
+                reasons.append("standby_unavailable_or_stale")
+            if integrity != "verified":
+                reasons.append("no_verified_checkpoint")
+            if row is not None and manifest.step_completed >= self._spec(job).target:
+                reasons.append("checkpoint_already_at_target")
+            journal_valid = self._verify_prefix(db)
+            if not journal_valid:
+                reasons.append("journal_integrity_failed")
+            return {"job_id": job_id, "state": job["state"], "owner": job["owner"], "epoch": job["epoch"],
+                    "lease_valid": lease_valid, "lease_remaining_s": max(0.0, (job["lease_until"] or now) - now),
+                    "standby_ready": standby_ready, "checkpoint": checkpoint, "checkpoint_integrity": integrity,
+                    "journal_chain_valid": journal_valid, "ready_for_drill": not reasons, "reasons": reasons,
+                    "checks_not_performed": ["cross_device_transfer", "physical_sensor", "provider_delivery"]}
+
     def commit_checkpoint(self, manifest: CheckpointManifest) -> bool:
         with self.transaction() as db:
             job = self._job(db, manifest.job_id)

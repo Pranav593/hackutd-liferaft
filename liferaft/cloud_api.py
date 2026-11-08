@@ -88,6 +88,15 @@ def application(repository, credentials, *, drills=False):
                     "event_export": "paged-v1"}
         if job is None:
             raise APIError("422 Unprocessable Entity", "JOB_REQUIRED")
+        if action == "doctor" and not args:
+            if role != "operator":
+                raise APIError("403 Forbidden", "ROLE_DENIED")
+            result = repository.execute(job, lambda policy: policy.readiness(job))
+            result["drills_enabled"] = drills
+            if not drills:
+                result["ready_for_drill"] = False
+                result["reasons"].append("drills_disabled")
+            return result
         worker = DEVICE_IDS.get(role)
 
         def allowed(roles):

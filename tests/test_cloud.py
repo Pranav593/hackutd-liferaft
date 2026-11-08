@@ -139,6 +139,22 @@ class CloudTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             application(self.repository, {role: "a" * 64 for role in TOKENS})
 
+    def test_job_doctor_is_operator_only_and_honors_drill_flag(self):
+        from test_transfers import fixture_manifest
+
+        manifest, _ = fixture_manifest()
+        spec = JobSpec(job_id=manifest.job_id, run_id=manifest.run_id, primary=PRIMARY, seed=1729,
+                       target=20, checkpoint_every=10, model_version=manifest.model_version,
+                       dataset_fingerprint=manifest.dataset_fingerprint, config_fingerprint=manifest.config_fingerprint)
+        self.call("create", **spec.model_dump(mode="json"))
+        for role in ("primary", "standby", "gateway"):
+            self.assertEqual(self.request("doctor", role=role)[0], 403)
+        self.app = application(self.repository, TOKENS, drills=False)
+        result = self.call("doctor")
+        self.assertFalse(result["ready_for_drill"])
+        self.assertIn("drills_disabled", result["reasons"])
+        self.assertEqual(result["checks_not_performed"], ["cross_device_transfer", "physical_sensor", "provider_delivery"])
+
     def test_button_requires_enabled_drill_and_scoped_gateway(self):
         for role, expected in (("unknown", 401), ("operator", 403), ("standby", 403), ("primary", 403)):
             with self.subTest(role=role):
