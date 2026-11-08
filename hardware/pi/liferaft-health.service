@@ -1,0 +1,24 @@
+[Unit]
+Description=LIFERAFT read-only Pi health sample (no training)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/liferaft-hardware/pi_health.py
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+ExecStart=/usr/bin/python3 /opt/liferaft-hardware/pi_health.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PATH=/usr/bin:/bin
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=15
+Restart=no
+CPUQuota=10%
+MemoryMax=96M
+StandardOutput=journal
+StandardError=journal

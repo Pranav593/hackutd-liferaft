@@ -1,0 +1,4 @@
+# Laptop-only tools. Install in .liferaft/hardware-tools, not system Python or Pi.
+esptool==5.6.0
+pyserial==3.5
+platformio==6.2.0

@@ -46,7 +46,8 @@
 - [ ] Deny anonymous/untrusted reads and fake device writes.
 - **Gate:** actual cross-laptop recovery needs **no inbound campus-LAN access**.
 
-### Phase 4 — Raspberry Pi 5 real worker — NOT_STARTED
+### Phase 4 — Raspberry Pi 5 real worker — IN_PROGRESS (safe host preparation)
+- [x] Boot, Pi 5 identity, ARM64 OS, Connect access, Python venv, public HTTPS and idle health observed; see `docs/HARDWARE_PROGRESS_REPORT.md`. Training/cooling and recovery gate remain open.
 - [ ] Pi boot, official power, compatible cooling verified in human safety steps.
 - [ ] Pi OS/ARM64 PyTorch installation capability audited; no destructive system changes.
 - [ ] Pi CPU temperature read-only; low-load training, cloud upload.
@@ -54,8 +55,9 @@
 - [ ] Document fallback if Pi cannot run PyTorch; no fake Pi compute indicator.
 - **Gate:** Pi→laptop real rescue OR clearly recorded fallback with Pi telemetry.
 
-### Phase 5 — ESP32-S3 sensor node, button and OLED — NOT_STARTED
-- [ ] ESP32 revision/port/pinout checked; board-only USB serial hello.
+### Phase 5 — ESP32-S3 sensor node, button and OLED — IN_PROGRESS (physical bench)
+- [x] Native USB enumeration, chip/flash identity, private original-flash backup, and real board-only USB serial hello verified on Windows.
+- [ ] Exact PCB revision and accessory pinouts checked before accessory wiring; chip revision and board-only hello are verified above.
 - [ ] Button with pull-up/debounce emits *injected* test incident.
 - [ ] OLED verified I2C voltage/address displays cloud-reported state.
 - [ ] DS18B20 pinout/resistor inspected; valid ambient measurement + invalid handling.
@@ -240,3 +242,73 @@
 - Laptop B restored step 70 with SHA-256 `fb0d9c1950044c48687708d066ef04729485fb672a4f735dcc3d138e5ab550ce`, matching Laptop A's committed checkpoint and the coordinator's transfer and resume evidence. It advanced to step 71 under epoch 2 and the supplied Windows log records training through step 183. Coordinator detection to first resumed step was 14.384 s. Coordinator-reported lost progress is unknown because there was no graceful yield.
 - Independently recomputed and matched all 46 event hashes in `.liferaft/campus-drill-01.jsonl` using the coordinator's canonical encoding. That export ends at step 120, and the latest supplied status is `VERIFIED_RESUMED`. A new `cloud --profile operator status --job campus-drill-01` call from the execution shell returned coordinator unavailable. Next evidence is the final status from Laptop A's normal Terminal with `state: COMPLETED`, `owner: laptop-standby`, `epoch: 2` and `last_step: 200`. No hardware action was taken.
 - Laptop A subsequently reported `state: FAILED`, owner `laptop-standby`, epoch 2, last recorded step 180 and no active lease. The watchdog transitions a resumed job to `FAILED` when its standby lease expires. A manual standby termination is consistent with the result, but the shared Windows log ends mid-line and does not identify the exit cause. The handoff passed, while the finish-to-step-200 check failed. Retry with a fresh job ID and keep the standby running until the coordinator records completion.
+
+### 2026-11-08 UTC — Phase 5 — physical ESP32 board-only gate passed
+
+- Actual native USB chip query identified ESP32-S3 revision 0.2, quad flash
+  16 MB, embedded PSRAM 8 MB and a 40 MHz crystal. COM socket did not enumerate
+  with the available C-to-C connection; native USB did. User performed BOOT/RST
+  to enter download mode, changing the native port from COM7 to COM8.
+- Hardware tool commands use `.liferaft/hardware-tools/Scripts/python.exe`.
+  `-m esptool --port COM8 --before no-reset --after no-reset --no-stub
+  --connect-attempts 2 flash-id` passed. `read-flash 0 ALL` saved all 16,777,216
+  bytes in 105.2 s under ignored `.liferaft/esp32-original-20261107/`.
+  Backup size and SHA-256 were verified locally; raw flash is not published.
+  Backup restoration is NOT tested.
+- Added `hardware/esp32/platformio.ini`, `hardware/esp32/src/main.cpp`,
+  `hardware/esp32/README.md`, `scripts/esp32_capture.py`. Updated hardware readiness
+  notes and this tracker only; Phase 3 code and cloud settings unchanged. Platform
+  8.0.0 and Arduino 3.3.12 build a USB-only test with no accessory GPIO, Wi-Fi,
+  relay or cloud actions. `PLATFORMIO_CORE_DIR` points at ignored `.liferaft/pio`;
+  build outputs stay under `.liferaft/esp32-build`.
+- `python -m platformio run --project-dir hardware/esp32` passed in 554.96 s
+  including first-time tool downloads. Flash use 314,434 bytes, RAM 22,336 bytes;
+  application binary 319,632 bytes. `esptool image-info` confirmed a valid S3
+  bootloader with 16 MB flash header, despite the base board's N8 display title.
+- The first upload was interrupted. Checked for active uploader processes and
+  re-enumerated USB before proceeding. A bounded capture found zero test lines.
+  `python -m platformio run --project-dir hardware/esp32 --target upload
+  --upload-port COM8` then passed in 8.13 s, with written-data hashes verified
+  for all four uploaded components. No full-chip erase or eFuse writes.
+- The initial post-upload capture also correctly failed (no samples). Espressif
+  documents that native USB default reset can retain manually entered download
+  mode. `esptool --port COM8 --before no-reset --after watchdog-reset --no-stub
+  --connect-attempts 2 flash-id` performed the supported full reset. This was
+  an ESP32 application-start reset, not a Pi shutdown, power or thermal change.
+- `python scripts/esp32_capture.py --port COM8` then passed: three real banners,
+  sequence 4/5/6, uptime 8008/10008/12008 ms, observed
+  `2026-11-08T03:05:26.645250+00:00`. Local proof is
+  `.liferaft/esp32-original-20261107/board-only-proof.json`. Application SHA-256:
+  `1982413572b9793d4da285226d2f6ca8f1499bd3fa1001d37674609f2ea4ed26`.
+  The capture's Bluetooth COM3 negative check was rejected before opening it.
+  Python compilation and `git diff --check` passed.
+- Still NOT TESTED: accessory pinout, button, OLED, temperature sensor, combined
+  firmware, sensor cloud forwarding and physical-button recovery. No jumper wires
+  or accessories were attached. Pi remains uncooled, without training; relay stays
+  disconnected. User's resistor color sequence identifies a 4.7k candidate but its
+  value was not measured. Need separate button photo, readable sensor marking and
+  sensor-board rear traces before the next wiring step. This is a board-only gate,
+  not completion of Phase 5 or cloud integration.
+
+### 2026-11-08 UTC — Hardware report and publication validation
+
+- Completed `docs/HARDWARE_PROGRESS_REPORT.md` and a 200-word shareable summary
+  in `docs/HARDWARE_SHARE_SUMMARY.md`. Included the staged Windows standby guide
+  after reviewing its scoped-token instructions. Marked Phase 4 host preparation
+  in progress without checking its cooling/training/recovery gate.
+- Resolved the `PHASE_TRACKER.md` upstream/stash conflict by retaining both the
+  software team's cross-laptop handoff and later completion failure, and the
+  hardware board-only proof. No conflict markers or unmerged paths remain.
+- `.venv/Scripts/python.exe -m unittest discover -s tests -v`: PASS, 26 tests,
+  108.241 s on Windows. Real 200-step checkpoint/resume test resumed at step 121
+  and maximum same-host loss difference was 0.0. These are local Windows test
+  results; neither Pi training nor integrated physical-sensor recovery is implied.
+- `.venv/Scripts/python.exe -m compileall -q liferaft scripts tests`,
+  `git diff --check`, and `git diff --cached --check`: PASS. Staged scan checked
+  all 15 files against private local-profile values, credential patterns,
+  prohibited raw artifact paths and merge markers: no findings. Private profiles,
+  original flash backups and compiled binaries remain ignored and uncommitted.
+- Phase 3 source and deployment configuration were not edited by this hardware
+  publication. No TypeScript changes or TypeScript validation are claimed.
+  On-Pi health service installation, accessory wiring/tests, combined firmware
+  and full physical-button cloud recovery remain NOT RUN.
