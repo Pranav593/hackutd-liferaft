@@ -84,7 +84,8 @@ function NodeGlow() {
 export function SystemTopology({ replay, selected }: { replay: Replay | null; selected: ReplayEvent | null }) {
   const primary = replay?.events.find((event) => event.kind === "JOB_STARTED")?.worker ?? replay?.recovery.checkpoint?.producer
   const standby = replay?.events.findLast((event) => event.kind === "LEASE_TRANSFERRED")?.worker
-  const sensor = replay?.events.findLast((event) => event.sensor)?.sensor
+  const sensor = replay?.events.findLast((event) => event.sensor?.button)?.sensor
+  const cpu = replay?.events.findLast((event) => event.kind === "PI_CPU_TELEMETRY")
   const activeWorker = selected?.worker
   const standbyStep = selected?.kind === "FIRST_RESUMED_STEP_COMPLETED"
   const link = selected?.sensor ? 3 : selected?.kind === "LEASE_TRANSFERRED" || standbyStep ? 1
@@ -96,7 +97,7 @@ export function SystemTopology({ replay, selected }: { replay: Replay | null; se
     { label: replay?.mode === "local" ? "Local coordinator" : "Cloud coordinator", sub: replay ? "RECORDED" : "NO DATA", icon: "cloud" },
     { label: primary ?? "Primary worker", sub: primary ? "RECORDED PRIMARY" : "NO DATA", icon: "laptop" },
     { label: standby ?? "Standby worker", sub: standby ? "RECORDED STANDBY" : "NO DATA", icon: "laptop" },
-    { label: "Raspberry Pi 5", sub: "NO CPU SAMPLE", icon: "chip" },
+    { label: "Raspberry Pi 5", sub: cpu?.cpu_c != null ? "CPU SAMPLE RECORDED" : "NO CPU SAMPLE", icon: "chip" },
     { label: "ESP32 gateway", sub: sensor?.button ? "BUTTON RECORDED" : "NO DATA", icon: "radio" },
   ] as const
 

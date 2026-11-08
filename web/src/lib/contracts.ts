@@ -77,3 +77,29 @@ export interface SensorEvent {
   ambient_valid: boolean
   bridge_received_utc: string
 }
+
+export interface AdaptiveHeartbeat extends WorkerHeartbeat {
+  checkpoint_ms?: number | null
+  step_wall_ms?: number | null
+}
+
+export interface PiTelemetry {
+  client_utc: string
+  pi_cpu_temp_c: number | null
+}
+
+export interface AmbientFrame {
+  protocol_version: 1
+  device_id: "esp32-s3-01"
+  seq: number
+  uptime_ms: number
+  ambient_temp_c: number | null
+  ambient_valid: boolean
+  button_pressed: false
+  event_type: "TELEMETRY"
+  source_type: "measured"
+}
+
+export interface AmbientReport extends AmbientFrame {
+  session: string
+}

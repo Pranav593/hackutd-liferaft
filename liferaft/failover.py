@@ -1,6 +1,7 @@
 """Local coordinator for a single primary-to-standby recovery per job."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+import json
 import math
 from pathlib import Path
 import sqlite3
@@ -11,8 +12,11 @@ from uuid import UUID, uuid4
 from pydantic import Field
 
 from .artifacts import IntegrityError, LocalArtifactStore
-from .contracts import ButtonEvent, CheckpointManifest, Digest, Identifier, IncidentEvent, WireModel, WorkerHeartbeat, utc_now
+from .contracts import AdaptiveHeartbeat, AmbientReport, ButtonEvent, CheckpointManifest, Digest, Identifier, IncidentEvent, PiTelemetry, WireModel, WorkerHeartbeat, utc_now
 from .coordinator import LocalCoordinator
+from . import photon_queue
+from .pi import PI_PRIMARY
+from .risk import COOLDOWN_S, FRESH_S, decide, lifeboat_score
 
 HEARTBEAT_S = 2.0
 LEASE_TTL_S = 12.0
@@ -36,6 +40,7 @@ class JobPlan:
     action: Literal["RUN", "PAUSE", "STOP"]
     lease_epoch: int
     lease_remaining_s: float
+    checkpoint_interval: int | None = None
 
 
 class WorkerCoordinator(Protocol):
@@ -85,9 +90,21 @@ class LocalFailover(LocalCoordinator):
                 """CREATE TABLE IF NOT EXISTS rescue_requests (
                     request_id TEXT PRIMARY KEY, job_id TEXT NOT NULL, incident_id TEXT NOT NULL
                 )""",
+                """CREATE TABLE IF NOT EXISTS edge_ambient (
+                    job_id TEXT PRIMARY KEY, session TEXT NOT NULL, seq INTEGER NOT NULL,
+                    seen REAL NOT NULL, ambient REAL
+                )""",
+                """CREATE TABLE IF NOT EXISTS edge_pi (
+                    job_id TEXT PRIMARY KEY, seen REAL NOT NULL, cpu REAL
+                )""",
+                """CREATE TABLE IF NOT EXISTS risk_state (
+                    job_id TEXT PRIMARY KEY, epoch INTEGER NOT NULL, seen REAL NOT NULL,
+                    cpu REAL, interval INTEGER NOT NULL, changed REAL NOT NULL, snapshot TEXT NOT NULL
+                )""",
                 """CREATE TABLE IF NOT EXISTS heartbeat_requests (
                     request_id TEXT PRIMARY KEY, received REAL NOT NULL
                 )""",
+                *photon_queue.SCHEMA,
             ):
                 db.execute(sql)
 
@@ -157,8 +174,93 @@ class LocalFailover(LocalCoordinator):
             job = self._job(db, job_id)
             if self._spec(job).primary == worker_id:
                 raise ValueError("primary cannot register as standby")
+            existing = db.execute("SELECT 1 FROM standby WHERE job_id=? AND worker_id=?",
+                                  (job_id, worker_id)).fetchone()
             db.execute("""INSERT INTO standby VALUES(?, ?, ?) ON CONFLICT(job_id, worker_id)
                           DO UPDATE SET seen=excluded.seen""", (job_id, worker_id, self.clock()))
+            if existing is None:
+                self._event(db, job, "STANDBY_REGISTERED", worker=worker_id)
+
+    def report_ambient(self, job_id, report: AmbientReport) -> bool:
+        with self.transaction() as db:
+            job = self._job(db, job_id)
+            now = self.clock()
+            if job["state"] in {"COMPLETED", "FAILED"}:
+                return False
+            previous = db.execute("SELECT * FROM edge_ambient WHERE job_id=?", (job_id,)).fetchone()
+            session = str(report.session)
+            if previous and (now - previous["seen"] < 1 or (
+                    previous["session"] == session and report.seq <= previous["seq"])):
+                return False
+            db.execute("INSERT OR REPLACE INTO edge_ambient VALUES (?, ?, ?, ?, ?)",
+                       (job_id, session, report.seq, now, report.ambient_temp_c))
+            if (previous is None or (previous["ambient"] is None) != (report.ambient_temp_c is None)
+                    or previous["ambient"] != report.ambient_temp_c):
+                self._event(db, job, "AMBIENT_TELEMETRY", source="measured", device_id=report.device_id,
+                            ambient_temp_c=report.ambient_temp_c, ambient_valid=report.ambient_valid)
+            return True
+
+    def report_pi(self, job_id, reading: PiTelemetry):
+        with self.transaction() as db:
+            job = self._job(db, job_id)
+            now = self.clock()
+            if job["state"] in {"COMPLETED", "FAILED"}:
+                return False
+            previous = db.execute("SELECT * FROM edge_pi WHERE job_id=?", (job_id,)).fetchone()
+            if abs(now - reading.client_utc.timestamp()) > FRESH_S or (previous and now - previous["seen"] < 1):
+                return False
+            cpu = reading.pi_cpu_temp_c
+            db.execute("INSERT OR REPLACE INTO edge_pi VALUES (?, ?, ?)", (job_id, now, cpu))
+            if previous is None or previous["cpu"] != cpu:
+                self._event(db, job, "PI_CPU_TELEMETRY", source="measured", worker=PI_PRIMARY,
+                            pi_cpu_temp_c=cpu, cpu_temp_valid=cpu is not None, mode="telemetry_only")
+            return True
+
+    def edge_status(self, job_id):
+        with self.transaction() as db:
+            job = self._job(db, job_id)
+            return {key: job[key] for key in ("state", "incident_id", "resume_step", "block_reason")}
+
+    def _risk(self, db, job, request, now):
+        job_id = job["job_id"]
+        normal = self._spec(job).checkpoint_every
+        previous = db.execute("SELECT * FROM risk_state WHERE job_id=? AND epoch=?",
+                              (job_id, job["epoch"])).fetchone()
+        ambient = db.execute("SELECT * FROM edge_ambient WHERE job_id=?", (job_id,)).fetchone()
+        checkpoint = db.execute("""SELECT manifest FROM checkpoints WHERE job_id=? AND epoch=?
+                                   ORDER BY step DESC LIMIT 1""", (job_id, job["epoch"])).fetchone()
+        manifest = CheckpointManifest.model_validate_json(checkpoint["manifest"]) if checkpoint else None
+        fresh_ambient = ambient["ambient"] if ambient and 0 <= now - ambient["seen"] <= FRESH_S else None
+        cpu = request.system.pi_cpu_temp_c if (
+            request.worker_id == PI_PRIMARY and abs(now - request.client_utc.timestamp()) <= FRESH_S) else None
+        gap = now - previous["seen"] if previous else None
+        previous_cpu = previous["cpu"] if gap is not None and 0 < gap <= FRESH_S else None
+        active = previous is not None and previous["interval"] < normal
+        ready = self._ready(db, job, now)
+        decision = decide(normal=normal, active=active, cpu=cpu, previous_cpu=previous_cpu,
+                          ambient=fresh_ambient, heartbeat_gap=gap, standby_ready=ready,
+                          lease_valid=self._owns(job, request.worker_id, request.lease_epoch, now),
+                          checkpoint_age=max(0, now - manifest.committed_utc.timestamp()) if manifest else None,
+                          checkpoint_ms=request.checkpoint_ms, step_wall_ms=request.step_wall_ms,
+                          injected=job["state"] in {"RESCUE_REQUESTED", "PREEMPTING"})
+        interval = decision.interval if job["state"] == "PRIMARY_RUNNING" and manifest else normal
+        previous_interval = previous["interval"] if previous else normal
+        changed = previous["changed"] if previous else 0
+        reasons = list(decision.reasons)
+        if interval < previous_interval and now - changed < COOLDOWN_S:
+            interval = previous_interval
+            reasons.append("checkpoint_policy_cooldown")
+        if interval != previous_interval:
+            changed = now
+        report = {"interval": interval, "risk_score": decision.score, "reasons": reasons,
+                  "cpu_c": cpu, "ambient_c": fresh_ambient, "checkpoint_ms": request.checkpoint_ms,
+                  "estimated_work_at_risk_steps": max(0, request.step_completed - manifest.step_completed)
+                  if manifest else None}
+        db.execute("INSERT OR REPLACE INTO risk_state VALUES (?, ?, ?, ?, ?, ?, ?)",
+                   (job_id, job["epoch"], now, cpu, interval, changed, json.dumps(report)))
+        if interval != previous_interval:
+            self._event(db, job, "CHECKPOINT_POLICY_CHANGED", **report)
+        return interval
 
     def heartbeat(self, request: WorkerHeartbeat) -> JobPlan:
         with self.transaction() as db:
@@ -175,14 +277,27 @@ class LocalFailover(LocalCoordinator):
             db.execute("DELETE FROM heartbeat_requests WHERE received < ?", (now - 120,))
             if not db.execute("INSERT OR IGNORE INTO heartbeat_requests VALUES(?, ?)",
                               (str(request.request_id), now)).rowcount:
-                return self._plan(job, action, now)
+                plan = self._plan(job, action, now)
+                if isinstance(request, AdaptiveHeartbeat):
+                    row = db.execute("SELECT interval FROM risk_state WHERE job_id=? AND epoch=?",
+                                     (job["job_id"], job["epoch"])).fetchone()
+                    return replace(plan, checkpoint_interval=row["interval"] if row else None)
+                return plan
+            interval = self._risk(db, job, request, now) if isinstance(request, AdaptiveHeartbeat) else None
             db.execute("UPDATE jobs SET lease_until=?, last_step=? WHERE job_id=?",
                        (now + self.lease_ttl_s, request.step_completed, request.job_id))
-            self._event(db, job, "WORKER_HEARTBEAT", step=request.step_completed)
+            telemetry = {}
+            if request.worker_id == PI_PRIMARY and abs(now - request.client_utc.timestamp()) <= FRESH_S:
+                telemetry = {"pi_cpu_temp_c": request.system.pi_cpu_temp_c, "arch": request.system.arch,
+                             "os": request.system.os, "cpu_temp_valid": request.system.cpu_temp_valid}
+                self._event(db, job, "PI_CPU_TELEMETRY", source="measured", **telemetry)
+            system = ({"os": request.system.os, "arch": request.system.arch}
+                      if isinstance(request, AdaptiveHeartbeat) else {})
+            self._event(db, job, "WORKER_HEARTBEAT", step=request.step_completed, **system)
             if job["state"] == "RESCUE_REQUESTED":
                 db.execute("UPDATE jobs SET state='PREEMPTING' WHERE job_id=?", (request.job_id,))
                 self._event(db, job, "PRIMARY_PAUSE_REQUESTED", step=request.step_completed)
-            return self._plan(self._job(db, request.job_id), action, now)
+            return replace(self._plan(self._job(db, request.job_id), action, now), checkpoint_interval=interval)
 
     def request_rescue(self, job_id: str, request_id: UUID, *, button: ButtonEvent | None = None) -> str:
         with self.transaction() as db:
@@ -280,9 +395,33 @@ class LocalFailover(LocalCoordinator):
             journal_valid = self._verify_prefix(db)
             if not journal_valid:
                 reasons.append("journal_integrity_failed")
+            policy_row = db.execute("SELECT seen, snapshot FROM risk_state WHERE job_id=? AND epoch=?",
+                                    (job_id, job["epoch"])).fetchone()
+            risk = (json.loads(policy_row["snapshot"]) if policy_row and
+                    0 <= now - policy_row["seen"] <= FRESH_S and lease_valid else None)
+            completed_drill = db.execute("""SELECT 1 FROM events AS triggers
+                JOIN events AS outcomes ON json_extract(triggers.body,'$.incident_id')=json_extract(outcomes.body,'$.incident_id')
+                WHERE triggers.job_id=? AND outcomes.job_id=triggers.job_id
+                AND json_extract(triggers.body,'$.event_type')='RESCUE_REQUESTED'
+                AND json_extract(triggers.body,'$.source_type')='injected'
+                AND json_extract(outcomes.body,'$.event_type')='FIRST_RESUMED_STEP_COMPLETED'
+                AND json_extract(outcomes.body,'$.source_type')='measured'
+                AND triggers.seq < outcomes.seq AND julianday(json_extract(outcomes.body,'$.created_utc'))
+                    BETWEEN julianday(?,'unixepoch','-1 day') AND julianday(?,'unixepoch') LIMIT 1""",
+                (job_id, now, now)).fetchone()
+            ambient = db.execute("SELECT * FROM edge_ambient WHERE job_id=?", (job_id,)).fetchone()
+            pi = db.execute("SELECT * FROM edge_pi WHERE job_id=?", (job_id,)).fetchone()
+            ambient_fresh = bool(ambient and ambient["ambient"] is not None and 0 <= now - ambient["seen"] <= FRESH_S)
+            independent_cpu = bool(pi and pi["cpu"] is not None and 0 <= now - pi["seen"] <= FRESH_S)
+            active_cpu = risk is not None and risk["cpu_c"] is not None
+            score = lifeboat_score(checkpoint_age=checkpoint["age_s"] if integrity == "verified" else None,
+                                   standby_ready=standby_ready, lease_valid=lease_valid,
+                                   telemetry_fresh=ambient_fresh and (active_cpu or independent_cpu),
+                                   recent_drill=completed_drill is not None)
             return {"job_id": job_id, "state": job["state"], "owner": job["owner"], "epoch": job["epoch"],
                     "lease_valid": lease_valid, "lease_remaining_s": max(0.0, (job["lease_until"] or now) - now),
                     "standby_ready": standby_ready, "checkpoint": checkpoint, "checkpoint_integrity": integrity,
+                    "risk_policy": risk, "lifeboat_score": score,
                     "journal_chain_valid": journal_valid, "ready_for_drill": not reasons, "reasons": reasons,
                     "checks_not_performed": ["cross_device_transfer", "physical_sensor", "provider_delivery"]}
 

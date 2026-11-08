@@ -2,9 +2,13 @@
 import json
 from uuid import uuid4
 
-from .contracts import CheckpointManifest, IncidentEvent, SensorEvent, WorkerHeartbeat, utc_now
+from .contracts import (
+    AdaptiveHeartbeat, AmbientFrame, AmbientReport, CheckpointManifest, IncidentEvent,
+    PiTelemetry, SensorEvent, WorkerHeartbeat, utc_now,
+)
 
-MODELS = (CheckpointManifest, IncidentEvent, SensorEvent, WorkerHeartbeat)
+MODELS = (CheckpointManifest, IncidentEvent, SensorEvent, WorkerHeartbeat,
+          AdaptiveHeartbeat, AmbientFrame, AmbientReport, PiTelemetry)
 
 
 def event_fixture(**overrides) -> IncidentEvent:

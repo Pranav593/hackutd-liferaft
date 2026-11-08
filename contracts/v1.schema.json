@@ -1,4 +1,318 @@
 {
+  "AdaptiveHeartbeat": {
+    "$defs": {
+      "WorkerCheckpoint": {
+        "additionalProperties": false,
+        "properties": {
+          "last_committed_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Committed Id"
+          }
+        },
+        "title": "WorkerCheckpoint",
+        "type": "object"
+      },
+      "WorkerSystem": {
+        "additionalProperties": false,
+        "properties": {
+          "arch": {
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Arch",
+            "type": "string"
+          },
+          "cpu_temp_valid": {
+            "default": false,
+            "title": "Cpu Temp Valid",
+            "type": "boolean"
+          },
+          "os": {
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Os",
+            "type": "string"
+          },
+          "pi_cpu_temp_c": {
+            "anyOf": [
+              {
+                "maximum": 110,
+                "minimum": -20,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pi Cpu Temp C"
+          }
+        },
+        "required": [
+          "os",
+          "arch"
+        ],
+        "title": "WorkerSystem",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "checkpoint": {
+        "$ref": "#/$defs/WorkerCheckpoint"
+      },
+      "checkpoint_ms": {
+        "anyOf": [
+          {
+            "maximum": 30000,
+            "minimum": 0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Checkpoint Ms"
+      },
+      "client_utc": {
+        "format": "date-time",
+        "title": "Client Utc",
+        "type": "string"
+      },
+      "job_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Job Id",
+        "type": "string"
+      },
+      "lease_epoch": {
+        "minimum": 0,
+        "title": "Lease Epoch",
+        "type": "integer"
+      },
+      "protocol_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Protocol Version",
+        "type": "integer"
+      },
+      "request_id": {
+        "format": "uuid",
+        "title": "Request Id",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "RUNNING",
+          "STANDBY",
+          "PAUSED",
+          "STOPPED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "step_completed": {
+        "minimum": 0,
+        "title": "Step Completed",
+        "type": "integer"
+      },
+      "step_wall_ms": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "maximum": 30000,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Step Wall Ms"
+      },
+      "system": {
+        "$ref": "#/$defs/WorkerSystem"
+      },
+      "worker_id": {
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$",
+        "title": "Worker Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "request_id",
+      "job_id",
+      "worker_id",
+      "lease_epoch",
+      "client_utc",
+      "step_completed",
+      "status",
+      "system",
+      "checkpoint"
+    ],
+    "title": "AdaptiveHeartbeat",
+    "type": "object"
+  },
+  "AmbientFrame": {
+    "additionalProperties": false,
+    "properties": {
+      "ambient_temp_c": {
+        "anyOf": [
+          {
+            "maximum": 125,
+            "minimum": -55,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Ambient Temp C"
+      },
+      "ambient_valid": {
+        "title": "Ambient Valid",
+        "type": "boolean"
+      },
+      "button_pressed": {
+        "const": false,
+        "title": "Button Pressed",
+        "type": "boolean"
+      },
+      "device_id": {
+        "const": "esp32-s3-01",
+        "title": "Device Id",
+        "type": "string"
+      },
+      "event_type": {
+        "const": "TELEMETRY",
+        "title": "Event Type",
+        "type": "string"
+      },
+      "protocol_version": {
+        "const": 1,
+        "title": "Protocol Version",
+        "type": "integer"
+      },
+      "seq": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "title": "Seq",
+        "type": "integer"
+      },
+      "source_type": {
+        "const": "measured",
+        "title": "Source Type",
+        "type": "string"
+      },
+      "uptime_ms": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "title": "Uptime Ms",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "protocol_version",
+      "device_id",
+      "seq",
+      "uptime_ms",
+      "ambient_temp_c",
+      "ambient_valid",
+      "button_pressed",
+      "event_type",
+      "source_type"
+    ],
+    "title": "AmbientFrame",
+    "type": "object"
+  },
+  "AmbientReport": {
+    "additionalProperties": false,
+    "properties": {
+      "ambient_temp_c": {
+        "anyOf": [
+          {
+            "maximum": 125,
+            "minimum": -55,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Ambient Temp C"
+      },
+      "ambient_valid": {
+        "title": "Ambient Valid",
+        "type": "boolean"
+      },
+      "button_pressed": {
+        "const": false,
+        "title": "Button Pressed",
+        "type": "boolean"
+      },
+      "device_id": {
+        "const": "esp32-s3-01",
+        "title": "Device Id",
+        "type": "string"
+      },
+      "event_type": {
+        "const": "TELEMETRY",
+        "title": "Event Type",
+        "type": "string"
+      },
+      "protocol_version": {
+        "const": 1,
+        "title": "Protocol Version",
+        "type": "integer"
+      },
+      "seq": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "title": "Seq",
+        "type": "integer"
+      },
+      "session": {
+        "format": "uuid",
+        "title": "Session",
+        "type": "string"
+      },
+      "source_type": {
+        "const": "measured",
+        "title": "Source Type",
+        "type": "string"
+      },
+      "uptime_ms": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "title": "Uptime Ms",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "protocol_version",
+      "device_id",
+      "seq",
+      "uptime_ms",
+      "ambient_temp_c",
+      "ambient_valid",
+      "button_pressed",
+      "event_type",
+      "source_type",
+      "session"
+    ],
+    "title": "AmbientReport",
+    "type": "object"
+  },
   "CheckpointManifest": {
     "additionalProperties": false,
     "properties": {
@@ -236,6 +550,35 @@
     "title": "IncidentEvent",
     "type": "object"
   },
+  "PiTelemetry": {
+    "additionalProperties": false,
+    "properties": {
+      "client_utc": {
+        "format": "date-time",
+        "title": "Client Utc",
+        "type": "string"
+      },
+      "pi_cpu_temp_c": {
+        "anyOf": [
+          {
+            "maximum": 110,
+            "minimum": 0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Pi Cpu Temp C"
+      }
+    },
+    "required": [
+      "client_utc",
+      "pi_cpu_temp_c"
+    ],
+    "title": "PiTelemetry",
+    "type": "object"
+  },
   "SensorEvent": {
     "additionalProperties": false,
     "properties": {
@@ -345,6 +688,9 @@
         "additionalProperties": false,
         "properties": {
           "arch": {
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
             "title": "Arch",
             "type": "string"
           },
@@ -354,6 +700,9 @@
             "type": "boolean"
           },
           "os": {
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
             "title": "Os",
             "type": "string"
           },

@@ -1,6 +1,6 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
-**Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. The Next.js cockpit can replay verified saved journals locally. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
+**Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. The Pi worker, edge monitor, adaptive scheduling, extended Nemotron tooling and Photon queue are implemented in software. The Next.js cockpit can replay verified saved journals locally. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
 
 ## Workflow rules
 
@@ -48,32 +48,35 @@
 - [ ] Deny anonymous/untrusted reads and fake device writes.
 - **Gate:** actual cross-laptop recovery needs **no inbound campus-LAN access**.
 
-### Phase 4 — Raspberry Pi 5 real worker — IN_PROGRESS (safe host preparation)
+### Phase 4 — Raspberry Pi 5 real worker — IN_PROGRESS (software implemented)
 - [x] Boot, Pi 5 identity, ARM64 OS, Connect access, Python venv, public HTTPS and idle health observed; see `docs/HARDWARE_PROGRESS_REPORT.md`. Training/cooling and recovery gate remain open.
 - [ ] Pi boot, official power, compatible cooling verified in human safety steps.
 - [ ] Pi OS/ARM64 PyTorch installation capability audited; no destructive system changes.
 - [ ] Pi CPU temperature read-only; low-load training, cloud upload.
 - [ ] Laptop A restores Pi-produced checkpoint, increments real training step.
-- [ ] Document fallback if Pi cannot run PyTorch; no fake Pi compute indicator.
+- [x] Scoped Pi worker, bounded host guard, separate CPU publisher and non-root service template.
+- [x] Laptop-primary and Pi telemetry-only fallback documented.
 - **Gate:** Pi→laptop real rescue OR clearly recorded fallback with Pi telemetry.
 
-### Phase 5 — ESP32-S3 sensor node, button and OLED — IN_PROGRESS (physical bench)
+### Phase 5 — ESP32-S3 sensor node, button and OLED — IN_PROGRESS (firmware and bridge implemented)
 - [x] Native USB enumeration, chip/flash identity, private original-flash backup, and real board-only USB serial hello verified on Windows.
 - [x] External GPIO5 button emitted a real contract-valid injected USB frame; local monitor exited and released COM8. Gateway and standby cloud doctors passed.
 - [ ] Exact PCB revision and accessory pinouts checked before accessory wiring; chip revision and board-only hello are verified above.
 - [x] Wired button emits an *injected* test incident and triggers an uninterrupted cloud recovery (`campus-button-05`).
-- [ ] OLED verified I2C voltage/address displays cloud-reported state.
+- [x] Combined firmware source, bounded monitor, separate ambient wire contract and verified-resume OLED logic.
+- [ ] PlatformIO target build, physical flash and OLED verified I2C voltage/address displays cloud-reported state.
 - [ ] DS18B20 pinout/resistor inspected; valid ambient measurement + invalid handling.
 - [x] Python USB bridge forwards validated button events via outbound HTTPS, verified in `campus-button-05`.
 - [x] One-shot button bridge and scoped coordinator action pass offline tests and the physical USB/Render drill.
 - [ ] Relay disconnected; no fan/Pi power switching; no real overheating.
 - **Gate:** physical button causes real software rescue and OLED reflects confirmed state.
 
-### Phase 6 — Deterministic risk + adaptive checkpointing — NOT_STARTED
-- [ ] Separate Pi CPU and ambient sensor metric sources; timestamp freshness.
-- [ ] Backup-ready and checkpoint-age awareness, policy cooldown/hysteresis.
-- [ ] Bounded adaptive interval and measured overhead.
-- [ ] Real RTO/RPO/continuity metrics, uncertainty properly represented.
+### Phase 6 — Deterministic risk + adaptive checkpointing — IN_PROGRESS (software verified)
+- [x] Separate Pi CPU and ambient sensor metric sources, timestamp freshness, and unavailable-score handling.
+- [x] Standby readiness, checkpoint age, policy cooldown and hysteresis.
+- [x] Bounded adaptive interval, single in-flight upload, and measured local checkpoint cost.
+- [x] Real local RTO/RPO/continuity metrics, with unknown crash RPO.
+- [ ] Repeat measured scenarios on the deployed coordinator and devices.
 - **Gate:** risk tests plus 3 measured scenarios pass without unsafe actions.
 
 ### Phase 7 — NVIDIA Nemotron tool agent — DONE (demo scope)
@@ -81,21 +84,24 @@
 - [x] Read-only typed incident and recovery-verification tools with a bounded exchange.
 - [x] Real multi-tool calls, evidence IDs and structured answer.
 - [x] Model has no power, command line, or leasing tools.
-- [x] Mock tests and real provider smoke test when credentials exist.
+- [x] Mock tests and real provider smoke test for the original two-tool path.
+- [x] Eight-tool extended mode, saved report and journal-matched UI trace pass offline tests.
+- [ ] Repeat a live NVIDIA call with the extended tool set.
 - **Gate:** actual provider trace from one incident; no fabricated results.
 
-### Phase 8 — Photon two-way communication — NOT_STARTED
-- [ ] Verified supported channel, project-scoped key stored privately.
-- [ ] Actual outbound notification; inbound secure event receiver.
-- [ ] `STATUS/WHY/CHECKPOINT/ACK/HELP`, dedupe, sender allowlist, privacy.
-- [ ] Channel failure does not block recovery.
+### Phase 8 — Photon two-way communication — BLOCKED_EXTERNAL (software implemented)
+- [x] Photon 2.0 iMessage project-scoped send, signed webhook, durable bounded outbox, and dedupe exercised with fixtures.
+- [x] `STATUS/WHY/CHECKPOINT/ACK/HELP`, incident-scoped Nemotron advisory handoff, and replay receipt display.
+- [x] The queue reads recovery evidence independently and never runs provider calls in lease transactions.
+- [ ] Provision a real project, key, direct space and signed webhook. Observe outbound notification, actual inbound reply and ACK.
 - **Gate:** real phone/provider round trip correlated to incident.
 
 ### Phase 9 — Real-data operations cockpit — IN_PROGRESS (saved evidence replay)
 - [x] Saved-evidence topology, recorded loss, checkpoint ledger and hash-verified flight recorder.
 - [x] Replay labels, event provenance, explicit unknowns and no-data states.
 - [x] Saved Nemotron trace validation and evidence links pass fixture tests.
-- [ ] Live coordinator freshness, readiness scoring, measured sensor feed, and Photon delivery/ACK evidence.
+- [x] Replay supports recorded Pi/ambient samples, risk decisions and Photon receipts when present.
+- [ ] Live coordinator freshness, readiness scoring, measured sensor feed and Photon delivery/ACK in a running deployment.
 - [ ] Demo controls only in demo mode, no unsafe hardware action.
 - [ ] UI API / auth / responsive / empty-state tests.
 - **Gate:** observer can prove real cross-device rescue from actual evidence.
@@ -917,3 +923,44 @@
   read-only in this session, shell DNS could not resolve GitHub, and the GitHub
   integration returned 403 when creating the commit tree. GitHub main was
   verified at the starting commit before the write attempt. Changes are local.
+
+
+### 2026-11-08 UTC — Phases 3–8 software checkpoint
+
+- Phase 3 retains the signed transfer and paged journal protocol. The coordinator
+  advertises the additive edge capability, accepts separately scoped Pi and
+  Photon roles, and preserves the older worker heartbeat response.
+- Phases 4–5 add the guarded Pi worker, telemetry-only fallback, non-root
+  service template, combined ESP32 target, bounded USB monitor and cloud-confirmed
+  OLED state. The independent button and OLED targets remain available.
+- Phase 6 persists advisory decisions and conditionally shortens the cadence to
+  five steps with a ready standby, fresh lease and bounded cost. One immutable
+  upload may run in the background. Later progress and yield wait for its result.
+- Phases 7–8 add eight read-only Nemotron tools, immutable saved reports,
+  Photon 2.0 signature validation, one-job direct-space allowlisting,
+  deduplicated commands and ACK, a durable retry queue, and a verified-resume
+  handoff note. The replay cockpit shows telemetry and provider events with
+  their provenance.
+- A real local 44-step workload with injected Pi policy inputs produced identical
+  optimizer losses with both schedules. One measured run used fixed checkpoint
+  steps 10, 20, 30, 40, 44 (63.71 ms cumulative checkpoint time) and adaptive
+  steps 10, 20, 25, 30, 35, 40, 44 (68.25 ms). These times describe this local
+  workload and the policy input is a fixture.
+- Read-only hosted doctor returned coordinator unavailable from this session.
+  Live Atlas, new cross-device recovery, Pi thermal/cooling operation,
+  ESP32 hardware and Photon round-trip remain external gates. The firmware
+  passed a host C++11 syntax check with stubs. PlatformIO installation timed out
+  fetching its package, so the actual ESP32 target remains uncompiled here.
+- Exact operator steps are in [the Phases 3–8 bring-up](docs/PHASES_3_8_OPERATOR_STEPS.md).
+- Final verification: `.venv/bin/python -m unittest discover -s tests -v`
+  ran 78 tests in 68.665 s. 73 passed and five skipped. Three skips require the
+  optional cloud test dependencies, and the hosted HTTPS and isolated Atlas
+  tests are opt-in. The new role and edge-policy suites also passed after
+  tightening the Pi identity check.
+- In-process signed transport resumed checkpoint 25 at step 26 and finished
+  at 200 with identical final tensors and zero loss delta. The corruption
+  fixture was rejected. This exercise used local WSGI transport and the new
+  edge heartbeat, without hosted TLS or physical hardware.
+- `npm run typecheck`, `NEXT_TELEMETRY_DISABLED=1 npm run build`,
+  `.venv/bin/python -m compileall -q liferaft tests scripts`, and
+  `git diff --check` passed.

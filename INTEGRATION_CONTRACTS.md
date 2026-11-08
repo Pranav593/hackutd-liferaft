@@ -84,6 +84,36 @@ contiguous sequences, unique IDs and exact job identity. A successful export add
 `complete: true`. Hash integrity detects tampering; it does not independently
 attest physical hardware, checkpoint bytes or an external trust anchor.
 
+### Edge and provider additions
+
+The jobless doctor advertises `edge_protocol: v1` and the authenticated worker
+identity. Laptop credentials and the original `heartbeat` request stay
+compatible. A separate `pi_primary` credential is required to start a
+`pi-primary` job or publish auxiliary Pi readings.
+
+| Action | Role | Boundary |
+|---|---|---|
+| `heartbeat_edge` | Current worker | Same epoch/lease checks plus optional measured checkpoint cost and paced optimizer-step cost |
+| `ambient` | Gateway | Measured DS18B20 frame with bridge session and increasing sequence, no rescue authority |
+| `pi_telemetry` | Pi primary | Fresh Pi CPU reading only, including when the primary job is on a laptop |
+| `edge_status` | Gateway | Read-only job state, incident and verified resumed step for OLED |
+| `photon_claim`, `photon_result` | Photon runner | One configured job, expiring outbox claims and bounded retries |
+| `POST /v1/photon/webhook` | Signed Photon request | Raw-body Standard Webhooks HMAC, project/direct-space/operator allowlist, durable provider-message dedupe |
+
+Risk is advisory. The only effect of an eligible CPU reading is a bounded
+checkpoint cadence. The training thread serializes a consistent model/RNG
+snapshot and a single background upload may be in flight. Its result settles
+before sending later progress or completing a yield. The old lease rules
+still govern every commit and transfer. The job doctor reports separate CPU
+and ambient evidence, estimated unprotected steps and a derived readiness score
+only when both telemetry sources and the active lease are fresh.
+
+The Photon outbox derives notifications from recorded rescue events. The
+provider runner sends outside recovery transactions using a stable idempotency
+key. Accepted, delivered, failed, inbound and ACK evidence are distinct.
+Only recognized commands are kept, and no user handles or raw webhook payloads
+are stored.
+
 ## 4. Canonical schema examples
 
 ### Worker heartbeat
