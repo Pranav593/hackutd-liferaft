@@ -191,7 +191,8 @@ On the operator computer, create an ignored `.env.photon` with
 `LIFERAFT_CLOUD_URL`, `LIFERAFT_CLOUD_TOKEN` set to the Photon runner token,
 and `PHOTON_API_KEY` set to the project-scoped Photon key. The runner uses
 outbound HTTPS. The hosted coordinator receives the webhook and does not need
-the project API key.
+the project API key. Run `curl --version` on the operator computer before
+starting the runner. It uses curl to submit messages to Photon.
 
 ```bash
 .venv/bin/python -m liferaft cloud --profile photon doctor

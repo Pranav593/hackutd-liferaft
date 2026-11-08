@@ -7,9 +7,9 @@ import hmac
 import json
 import os
 import re
+import shutil
+import subprocess
 import time
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, build_opener
 
 COMMANDS = frozenset({"STATUS", "WHY", "CHECKPOINT", "ACK", "HELP"})
 MAX_WEBHOOK_BYTES = 32 * 1024
@@ -107,47 +107,51 @@ class PhotonSendError(RuntimeError):
 
 class PhotonClient:
     def __init__(self, key):
-        from .cloud import NoRedirect
-
         if not re.fullmatch(r"pho_sk_[A-Za-z0-9_-]{12,256}", key):
             raise ValueError("configure a project-scoped Photon API key")
         self.key = key
-        self.opener = build_opener(NoRedirect())
+        self.curl = shutil.which("curl")
+        if not self.curl:
+            raise ValueError("install curl on the Photon runner")
 
     def send(self, task):
         project, space, sender = (task[key] for key in ("project", "space", "agent"))
         if not all(valid_id(value, kind) for value, kind in ((project, "prj"), (space, "spc"), (sender, "usr"))):
             raise PhotonSendError(False)
-        request = Request(f"https://api.photon.codes/v1/projects/{project}/messages", method="POST",
-                          data=json.dumps({"spaceId": space, "senderId": sender, "content": {
-                              "type": "text", "format": "plain", "text": task["text"],
-                          }}).encode(), headers={"Authorization": f"Bearer {self.key}",
-                                                "Content-Type": "application/json", "Idempotency-Key": task["id"]})
-        deadline = time.monotonic() + 3
+        if not re.fullmatch(r"[0-9a-f-]{36}", task["id"]):
+            raise PhotonSendError(False)
+        body = json.dumps({"spaceId": space, "senderId": sender, "content": {
+            "type": "text", "format": "plain", "text": task["text"],
+        }})
+        # Photon accepts curl on networks where its edge rejects urllib. Send the
+        # key over stdin so it never appears in the command line or curl config files.
+        config = "\n".join((
+            f'header = "Authorization: Bearer {self.key}"',
+            'header = "Content-Type: application/json"',
+            f'header = "Idempotency-Key: {task["id"]}"',
+            f"data-binary = {json.dumps(body)}",
+            "",
+        )).encode()
         try:
-            with self.opener.open(request, timeout=3) as response:
-                if response.status != 202:
-                    raise PhotonSendError(False)
-                raw = bytearray()
-                read = getattr(response, "read1", response.read)
-                while time.monotonic() < deadline and len(raw) <= MAX_WEBHOOK_BYTES:
-                    chunk = read(min(4096, MAX_WEBHOOK_BYTES + 1 - len(raw)))
-                    if time.monotonic() >= deadline:
-                        raise PhotonSendError(True)
-                    if not chunk:
-                        break
-                    raw.extend(chunk)
-                else:
-                    raise PhotonSendError(True)
+            response = subprocess.run(
+                [self.curl, "--disable", "--config", "-", "--silent", "--proto", "=https",
+                 "--max-time", "3", "--max-filesize", str(MAX_WEBHOOK_BYTES), "--limit-rate", "64K",
+                 "--write-out", "\n%{http_code}", f"https://api.photon.codes/v1/projects/{project}/messages"],
+                input=config, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=4,
+            )
+            if response.returncode:
+                raise PhotonSendError(True)
+            raw, _, status = response.stdout.rpartition(b"\n")
+            if status != b"202":
+                raise PhotonSendError(status in {b"000", b"408", b"429", b"500", b"502", b"503", b"504"})
+            if len(raw) > MAX_WEBHOOK_BYTES:
+                raise PhotonSendError(True)
             message = json.loads(raw)
             if (not valid_id(message["id"], "msg") or message["projectId"] != project
                     or message["space"]["id"] != space or message["sentBy"]["id"] != sender):
                 raise PhotonSendError(True)
             return message["id"]
-        except HTTPError as error:
-            error.close()
-            raise PhotonSendError(error.code in {408, 429, 500, 502, 503, 504}) from None
-        except (URLError, OSError):
+        except (OSError, subprocess.TimeoutExpired):
             raise PhotonSendError(True) from None
         except (KeyError, TypeError, ValueError):
             raise PhotonSendError(True) from None

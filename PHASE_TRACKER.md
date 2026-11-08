@@ -89,11 +89,14 @@
 - [ ] Repeat a live NVIDIA call with the extended tool set.
 - **Gate:** actual provider trace from one incident; no fabricated results.
 
-### Phase 8 — Photon two-way communication — BLOCKED_EXTERNAL (software implemented)
+### Phase 8 — Photon two-way communication — IN_PROGRESS (live STATUS and ACK verified)
 - [x] Photon 2.0 iMessage project-scoped send, signed webhook, durable bounded outbox, and dedupe exercised with fixtures.
 - [x] `STATUS/WHY/CHECKPOINT/ACK/HELP`, incident-scoped Nemotron advisory handoff, and replay receipt display.
 - [x] The queue reads recovery evidence independently and never runs provider calls in lease transactions.
-- [ ] Provision a real project, key, direct space and signed webhook. Observe outbound notification, actual inbound reply and ACK.
+- [x] Provision a real project, key, direct space and signed webhook. Confirm the signed event reaches the deployed coordinator.
+- [x] Observe the reply to an inbound `STATUS` in the operator's iMessage conversation and its signed delivery callback.
+- [x] Observe the live signed `ACK` and verify one matching incident-bound journal event.
+- [ ] Observe an automatic outbound drill notification on a fresh drill.
 - **Gate:** real phone/provider round trip correlated to incident.
 
 ### Phase 9 — Real-data operations cockpit — IN_PROGRESS (saved evidence replay)
@@ -129,7 +132,7 @@
 | Check DS18B20 sensor type and presence of 4.7kΩ resistor | avoid wrong wiring | `HARDWARE_SAFETY_AND_WIRING.md` §B/C | NOT_CHECKED |
 | Team MongoDB Atlas project account (Phase 3) | hosted coordination and checkpoint storage | `docs/PHASE_3_ATLAS_SETUP.md` §§1–4 | PENDING |
 | NVIDIA Build account/key (when Phase 7 needs it) | live tool-using agent | `TEAM_SETUP_GUIDE.md` §5 | NOT_CHECKED |
-| Photon project/channel and consenting operator (Phase 8) | real messaging | `TEAM_SETUP_GUIDE.md` §6 | NOT_CHECKED |
+| Photon project/channel and consenting operator (Phase 8) | real messaging | `docs/PHASES_3_8_OPERATOR_STEPS.md` §6 | PROVISIONED |
 | Compatible ESP32 USB data cable | flash/read serial | `TEAM_SETUP_GUIDE.md` §8 | NOT_CHECKED |
 
 ## Append one entry after each work session
@@ -1162,3 +1165,49 @@
 - Backend final result: 78 tests run in 133.340 s, OK (2 opt-in remote
   tests skipped). Same-host resume loss difference 0.0 and final weights
   equal; this does not establish new cross-device or hardware evidence.
+
+### 2026-11-08 — Live Photon webhook setup
+
+- Provisioned a Photon Beta destination on Render for `message.received`,
+  `message.delivered`, and `message.failed` with API version `2026-07-01`.
+  Render deployed the webhook secret, scoped runner token and one direct-space
+  allowlist for the isolated job `photon-status-01`. The project API key is in
+  the ignored runner profile.
+- Photon recorded an actual inbound `STATUS`. Render returned HTTP 404 before
+  enablement and HTTP 422 after enablement, consistent with signature validation
+  passing and the demo job still needing creation. The deployment reported Live.
+- `.venv/bin/python -m unittest discover -s tests -p 'test_photon.py'` passed 3/3.
+  The sandbox could not resolve either provider hostname for the local runner.
+  Next, start the isolated hosted drill and runner from the operator's terminal,
+  send a fresh `STATUS`, and correlate the command, reply and delivery receipt.
+- The operator's hosted doctor authenticated as `photon`. The isolated drill
+  started and the standby completed step 200 at epoch 2. A fresh `STATUS` from
+  the allowlisted iMessage conversation received HTTP 200 from the Render webhook.
+  The verified journal recorded `PHOTON_COMMAND_RECEIVED` for `STATUS` at
+  sequence 38 and `PHOTON_SUBMISSION_REJECTED` at sequence 40. A separate
+  authenticated request to list Photon messages returned HTTP 403. The
+  dashboard shows full project access on the configured key.
+- The operator reproduced the rejection on a read-only request. Cloudflare
+  returned HTTP 403 with error 1010 to urllib, while curl returned HTTP 200
+  with the same key and request. Switched the local Photon runner to curl
+  with credentials passed through stdin and bounded request and response
+  handling. The Photon test suite passed 3/3 and the cloud test suite passed 9/9.
+- `.venv/bin/python -m liferaft cloud --profile photon photon --job photon-status-01
+  --seconds 120` recorded `PHOTON_SUBMISSION_ACCEPTED` at 13:55:41 UTC. The operator's
+  iMessage conversation showed the reply for `photon-status-01` reporting
+  `COMPLETED`, owner `laptop-standby`, recorded step 200, epoch 2. Photon showed a
+  matching signed `message.delivered` callback and HTTP 200 from Render. The live
+  automatic drill notification remains to be observed.
+- Sent `ACK` over the real iMessage conversation. Photon recorded the signed
+  request, and Render returned HTTP 200. A read-only Atlas query of the test job
+  snapshot found one `PHOTON_ACK` matching the drill incident, its `ACK` command
+  record, and one `PHOTON_DELIVERED` event for the earlier reply.
+- Full Python discovery ran 78 tests: 73 passed, three Atlas fault tests skipped
+  for missing PyMongo, and two live tests skipped by default. The hosted access
+  check was attempted separately and was blocked by DNS. The isolated Atlas
+  test had no test URI. A separate fault probe injected a Photon send failure
+  and still reached `VERIFIED_RESUMED` through fenced checkpoint recovery.
+- `npm run test:contracts` and `git diff --check` passed. Dashboard unit tests,
+  typecheck, production build and Playwright were blocked by missing dependencies.
+  An isolated offline `npm ci` found an incomplete cache, and registry DNS failed
+  during an isolated online install attempt. No dashboard test pass is claimed.

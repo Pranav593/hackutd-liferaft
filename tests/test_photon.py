@@ -3,6 +3,7 @@ from base64 import b64encode
 import hmac
 import io
 import json
+import subprocess
 import time
 import unittest
 from datetime import datetime, timezone
@@ -133,18 +134,19 @@ class PhotonTests(unittest.TestCase):
         task = self.control("photon_claim")
         message = self.event(status="delivered", mid=7)["data"]["object"]
 
-        class Response(io.BytesIO):
-            status = 202
+        def fake_run(args, *, input, stdout, stderr, timeout):
+            self.assertEqual(timeout, 4)
+            self.assertNotIn(client.key, " ".join(args))
+            self.assertEqual(args[1:4], ["--disable", "--config", "-"])
+            self.assertIn(f'Authorization: Bearer {client.key}', input.decode())
+            self.assertIn(f'Idempotency-Key: {task["id"]}', input.decode())
+            payload = input.decode().split("data-binary = ", 1)[1]
+            self.assertEqual(json.loads(json.loads(payload))["spaceId"], self.scope.space)
+            return subprocess.CompletedProcess(args, 0, json.dumps(message).encode() + b"\n202")
 
-        def fake_open(request, timeout):
-            self.assertEqual(timeout, 3)
-            self.assertEqual(request.get_header("Idempotency-key"), task["id"])
-            self.assertEqual(json.loads(request.data)["spaceId"], self.scope.space)
-            return Response(json.dumps(message).encode())
-
-        with patch.object(client.opener, "open", side_effect=fake_open):
+        with patch("liferaft.photon.subprocess.run", side_effect=fake_run):
             self.assertEqual(client.send(task), provider_id("msg", 7))
-        with patch.object(client.opener, "open", side_effect=TimeoutError):
+        with patch("liferaft.photon.subprocess.run", side_effect=subprocess.TimeoutExpired("curl", 4)):
             with self.assertRaises(PhotonSendError) as raised:
                 client.send(task)
             self.assertTrue(raised.exception.retryable)
