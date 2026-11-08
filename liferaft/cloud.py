@@ -74,6 +74,9 @@ class CloudWorkerCoordinator:
         return [CheckpointManifest.model_validate(item) for item in self.client.call("candidates", job_id)]
 
     def claim_standby(self, job_id, worker_id, expected_epoch, checkpoint_id):
+        # Restore/HTTPS latency can exceed the standby freshness window. Renew
+        # presence, not ownership; the atomic claim still validates epoch/state.
+        self.register_standby(job_id, worker_id)
         return JobPlan(**self.client.call("claim", job_id, epoch=expected_epoch, checkpoint_id=checkpoint_id))
 
     def commit_checkpoint(self, manifest):
@@ -90,6 +93,9 @@ class CloudWorkerCoordinator:
         return self.client.call("complete", job_id, epoch=epoch)
 
     def fetch_checkpoint(self, manifest):
+        # An offer is a snapshot, not a lasting authorization. Keep our existing
+        # scoped standby identity fresh before the separately authorized GET.
+        self.client.call("register", manifest.job_id)
         raw = self.client.call("download", manifest.job_id, epoch=manifest.lease_epoch,
                                checkpoint_id=manifest.checkpoint_id)
         data = verify_data(b64decode(raw, validate=True), manifest)

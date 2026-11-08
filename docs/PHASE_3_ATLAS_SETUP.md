@@ -145,6 +145,21 @@ The event export should show `chain_valid: true`, an injected `RESCUE_REQUESTED`
 
 5. Check the operator events for `SENSOR_EVENT_RECEIVED` with `source_type: injected`, then a `RESCUE_REQUESTED` whose `trigger_event_id` matches that sensor event. Let Windows finish and confirm `COMPLETED` at step 200. If the button is unavailable, use the operator `rescue` command for the software-only drill. If the bridge reports a USB or HTTP error, use operator status to establish whether a request arrived before rearming.
 
+### Standby download freshness
+
+The standby's readiness expires after six seconds. HTTPS latency between a
+checkpoint offer, download and restore can cross that boundary. The current
+client refreshes its own scoped standby presence immediately before download
+and before atomic claim. The coordinator still checks readiness, state, epoch,
+checkpoint integrity and role; the refresh does not grant ownership.
+
+If Windows reports `coordinator rejected download (HTTP 403)`, keep that output
+and inspect operator status/events before retrying. Update Laptop B to the client
+with the presence-refresh fix; this client-only change requires no coordinator
+deployment. Do not disable freshness checks, change roles or repeatedly press
+the physical button. A recorded button request is not proof that the standby
+resumed. Preserve failed-drill evidence and use a fresh job for a clean repeat.
+
 ## 6. Optional live cloud verification
 
 Run the hosted access checks on a laptop with its existing `.env.standby`. These probes use a fresh nonexistent job ID and expect the coordinator to reject an anonymous download and an authenticated worker impersonation.

@@ -27,14 +27,16 @@ BUTTON = {"protocol_version": 1, "device_id": "esp32-s3-01", "seq": 18, "uptime_
 
 class LocalRepository:
     """Exercise the actual policy and HTTP surface against disposable local storage."""
-    def __init__(self, directory):
+    def __init__(self, directory, clock=None):
         self.directory = directory
+        self.clock = clock
 
     def ping(self):
         pass
 
     def execute(self, job, operation, *, create=False, upload=None):
-        policy = LocalFailover(self.directory / job)
+        policy = (LocalFailover(self.directory / job, clock=self.clock) if self.clock
+                  else LocalFailover(self.directory / job))
         if upload is not None:
             manifest, data = upload
             try:
@@ -133,6 +135,57 @@ class CloudTests(unittest.TestCase):
 
         spec = self.call("spec", role="primary")
         self.assertEqual(spec["config_fingerprint"], CONFIG_FINGERPRINT)
+
+    def test_standby_refreshes_presence_before_download_and_claim(self):
+        # Real policy/API; simulate network/restore latency across the six-second
+        # readiness boundary without weakening the coordinator's checks.
+        now = [time.time()]
+        self.repository = LocalRepository(self.root, clock=lambda: now[0])
+        self.app = application(self.repository, TOKENS, drills=True)
+        spec = JobSpec(job_id="test-job", run_id="run-delayed", primary=PRIMARY,
+                       seed=1729, target=20, checkpoint_every=10, model_version="test-model",
+                       dataset_fingerprint="a" * 64, config_fingerprint="b" * 64)
+        self.call("create", **spec.model_dump(mode="json"))
+        self.call("register", role="standby")
+        self.call("start", role="primary")
+        data = b"latency-test fixture; not a training checkpoint"
+        manifest = CheckpointManifest(
+            checkpoint_id="ckpt-delayed", job_id=spec.job_id, run_id=spec.run_id,
+            step_completed=10, worker_id=PRIMARY, lease_epoch=1,
+            path="runs/run-delayed/checkpoints/000010-ckpt-delayed.pt",
+            sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data),
+            dataset_fingerprint=spec.dataset_fingerprint, config_fingerprint=spec.config_fingerprint,
+            model_version=spec.model_version, created_utc=utc_now())
+        self.assertTrue(self.call("commit", role="primary",
+                                  manifest=manifest.model_dump(mode="json"),
+                                  data=b64encode(data).decode()))
+        self.call("button", role="gateway", **BUTTON)
+        heartbeat = WorkerHeartbeat(
+            request_id=uuid4(), job_id=spec.job_id, worker_id=PRIMARY, lease_epoch=1,
+            client_utc=utc_now(), step_completed=10, status="RUNNING",
+            system=WorkerSystem(os="test", arch="test"), checkpoint=WorkerCheckpoint())
+        self.call("heartbeat", role="primary", **heartbeat.model_dump(mode="json"))
+        self.assertTrue(self.call("yield", role="primary", epoch=1,
+                                  checkpoint_id=manifest.checkpoint_id))
+
+        class Client:
+            def call(client_self, action, job, **fields):
+                return self.call(action, job, role="standby", **fields)
+
+        standby = CloudWorkerCoordinator(Client(), LocalArtifactStore(self.root / "delayed-standby"))
+        offered, = standby.checkpoint_candidates(spec.job_id, STANDBY)
+        now[0] += 7
+        # Expired readiness remains denied by the API itself.
+        self.assertEqual(self.request("download", role="standby", epoch=1,
+                                      checkpoint_id=offered.checkpoint_id)[0], 403)
+        self.assertEqual(standby.fetch_checkpoint(offered).read_bytes(), data)
+        now[0] += 7  # Deserialization/transfer can also delay ownership claim.
+        self.assertEqual(self.call("claim", role="standby", epoch=1,
+                                   checkpoint_id=offered.checkpoint_id)["action"], "STOP")
+        plan = standby.claim_standby(spec.job_id, STANDBY, 1, offered.checkpoint_id)
+        self.assertEqual((plan.action, plan.lease_epoch), ("RUN", 2))
+        self.assertEqual(self.request("download", role="primary", epoch=1,
+                                      checkpoint_id=offered.checkpoint_id)[0], 403)
 
     def test_private_transfer_fencing_and_evidence(self):
         spec = JobSpec(job_id="test-job", run_id="test-run", primary=PRIMARY, seed=1729, target=20,

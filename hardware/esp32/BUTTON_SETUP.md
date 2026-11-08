@@ -119,3 +119,10 @@ The actual rescue requires a fresh agreed job ID, Laptop A primary training,
 Laptop B standby and a ready verified checkpoint. Only then arm the one-shot
 gateway bridge and press the physical button. Do not launch the bridge against
 an old job or call a synthetic button request to manufacture physical evidence.
+
+If the button is recorded but standby exits with download HTTP 403, investigate
+the worker/HTTP path rather than changing the button wiring. The client now
+refreshes its own standby presence before download and claim to avoid readiness
+expiring between requests. The same coordinator safety checks remain in place.
+Keep the two Windows processes running concurrently; the serial bridge exits
+after its single request, while the standby must run through completion.

@@ -456,3 +456,108 @@
   Laptop A primary, arm bridge, press once after a committed checkpoint, and
   retain final completion/event-chain evidence. No new job or rescue was issued
   by this hardware session yet. OLED, temperature sensor and relay untouched.
+
+### 2026-11-08 UTC — campus-button-03 blocked; standby exit under investigation
+
+- Operator supplied Windows bridge output: armed at 05:50:34 UTC, then
+  BUTTON_REQUEST_RECORDED (injected) at 05:51:07 UTC with incident
+  inc-45f4184f0de244efba2603097a7c1703. This establishes a physical serial frame
+  reached the authenticated coordinator; it does not establish a successful
+  RESCUE_REQUESTED transition or recovery.
+- Operator armed a second bridge against the same job at 05:51:59 UTC; a new
+  request received HTTP 422 at 05:52:21 UTC. The policy rejects a new drill if the
+  primary is not PRIMARY_RUNNING or its lease expired. This is a separate press,
+  not an automatic retry of the first frame. Exact rejection reason is hidden by
+  the generic API response and is not independently proven from this output.
+- Supplied Mac status at 05:52:47 UTC reports RECOVERY_PENDING, owner
+  laptop-primary, epoch 1, last_step 55, no active lease, no selected checkpoint,
+  STANDBY_UNAVAILABLE and standby_ready false. Its incident differs from the
+  first button acknowledgment. No transfer, first resumed step or completion
+  result is present; do not mark the drill passed or label it a graceful yield.
+- Read-only Windows process inspection at 05:54 UTC found no running liferaft
+  worker. The cloud-standby directory created around 05:50 UTC contains no files.
+  This does not identify why the worker exited. Requested the original Windows
+  standby terminal's full output/error before modifying software or retrying.
+- No bridge rearmed, job state changed, worker restarted or lease extended by
+  this investigation. Preserve the failed job and exported events. Root cause
+  remains open pending standby exit evidence; do not assume user termination,
+  four-minute deadline, transient HTTPS error or a firmware fault.
+
+### 2026-11-08 UTC — campus-button-03 late standby recovered to completion
+
+- Operator reported running standby and bridge in the same PowerShell. This
+  does not preserve concurrent processes; exact original standby exit output was
+  not retained, so its exit cause is not independently established.
+- Authorized small real-cloud recovery test: assistant launched the existing
+  standby command for campus-button-03 as a separate managed process, with all
+  output saved to ignored `.liferaft/button-proof/campus-button-03-late-standby.jsonl`.
+  No primary launched, new job created, sensor frame injected or bridge rearmed.
+- Worker restored actual cloud checkpoint step 50, SHA-256
+  5a295ea49175c97993f379808f1e4be2265bee0ec455ec92df8dc03fb1d522d2,
+  claimed epoch 2, executed real optimizer steps 51 through 200 and exited 0 after
+  coordinator completion returned true. Final measured loss 0.014667629264295101.
+  Verified all 150 emitted steps are contiguous and carry job/epoch identity;
+  resumed training elapsed 74.761 s. Local summary
+  is `.liferaft/button-proof/campus-button-03-recovery-summary.json`.
+- This proves late cloud checkpoint recovery and accepted completion. It does
+  NOT retroactively turn the original blocked button drill into a successful
+  immediate button handoff. The physical button reached the coordinator earlier,
+  but the primary later lost its lease and the standby was started after the
+  reported RECOVERY_PENDING/STANDBY_UNAVAILABLE state. RPO is not claimed zero;
+  authoritative final status/event-chain review remains with Laptop A's operator.
+- For a fresh automatic drill, keep standby running separately from the one-shot
+  bridge, pre-open terminals and logs, and verify readiness before pressing once.
+  Do not repeat presses against a non-running/completed job. Hardware unchanged;
+  Pi, relay, temperature sensor and OLED untouched.
+
+### 2026-11-08 UTC — Operator confirmed campus-button-03 completion
+
+- Operator on Laptop A ran the requested final status command. Hardware operator
+  relayed that all expected fields matched: state COMPLETED, owner laptop-standby,
+  epoch 2 and last_step 200. This is operator-reported authoritative status,
+  consistent with the locally observed standby exit 0 after accepted completion.
+- Gate classification remains: physical USB button delivery verified; subsequent
+  late standby cloud checkpoint recovery and completion verified. The original
+  immediate button handoff was blocked by STANDBY_UNAVAILABLE, so no fresh
+  automatic button-triggered handoff or event-chain linkage is claimed complete.
+- No further press or rerun is required for this completed job. A future fresh
+  automatic drill must keep standby and bridge in separate concurrent processes.
+  No firmware, cloud settings, wiring or credentials changed for this confirmation.
+
+### 2026-11-08 UTC — Reproduced/fixed standby readiness race; campus-button-04 completed
+
+- Operator's screenshot shows a genuine bridge acknowledgment for campus-button-04
+  at 06:04:42 UTC, followed by standby `download (HTTP 403)` at 06:04:49 UTC.
+  Kept failed-transfer evidence; no firmware or wiring fault is inferred.
+- Reproduced CHECKPOINT_NOT_OFFERED HTTP 403 through the actual offline WSGI API
+  and policy: advance the controlled clock seven seconds between a valid offer
+  and download, allowing the six-second standby freshness window to expire.
+  Added the regression before the production fix and observed its 403 failure.
+  This demonstrates a code path consistent with the screenshot; no hosted server
+  trace was available to independently establish the original request timing.
+- Fixed only the outbound CloudWorkerCoordinator: refresh the authenticated
+  standby's own presence before checkpoint download and before ownership claim
+  after restore. No role, state, epoch, lease or checksum check is bypassed or
+  extended. The regression also verifies direct stale download remains denied,
+  stale claim returns STOP, and the wrong role still cannot download. Existing
+  fencing/integrity tests pass. No coordinator code change is needed.
+- Cloud suite passed 7/7 in 4.595 s. Full Windows suite ran 31 tests in 110.776 s,
+  OK with 2 opt-in hosted/isolated-Atlas tests skipped. The real 200-step local
+  training test resumed at 121 with maximum loss difference 0.0. Compilation and
+  Git whitespace checks passed. Updated setup docs with the freshness failure
+  and safe retry guidance.
+- After confirming no active Windows worker, ran patched standby against the
+  existing campus-button-04 as a separate managed process, retaining output in
+  ignored `.liferaft/button-proof/campus-button-04-fixed-standby.jsonl`.
+  It restored checkpoint 30, SHA-256
+  1672ae2f7d90063b7e2b8efa219d2176af5a0fcbfd6b828c06595328a9f007f2,
+  claimed epoch 2 and executed every step 31 through 200. Observed exit code 0
+  after coordinator completion acceptance. Final loss 0.014667626470327377;
+  170 real optimizer steps over 85.345 s. Retained a local parsed proof summary
+  in `campus-button-04-fixed-summary.json`. No synthetic sensor frame or extra
+  button request was sent by the assistant.
+- This is successful late recovery with the fixed client, not proof that the
+  original standby survived the whole button handoff. A fresh uninterrupted
+  physical drill and operator event-chain review remain open. Laptop A can
+  confirm final status with its existing operator role. Pi/OLED/temperature/relay
+  unchanged; profiles, backup binaries and runtime evidence remain untracked.
