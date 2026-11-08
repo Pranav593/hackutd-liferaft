@@ -82,10 +82,39 @@ class LocalCoordinator:
 
     def verify_chain(self) -> bool:
         with self.transaction() as db:
-            previous = GENESIS
-            for row in db.execute("SELECT * FROM events ORDER BY seq"):
-                digest = hashlib.sha256(f"{previous}\n{row['body']}".encode()).hexdigest()
-                if row["prev_hash"] != previous or row["event_hash"] != digest:
-                    return False
-                previous = digest
-            return True
+            return self._verify_prefix(db)
+
+    @staticmethod
+    def _verify_prefix(db, through=2**63 - 1):
+        previous = GENESIS
+        for row in db.execute("SELECT * FROM events WHERE seq <= ? ORDER BY seq", (through,)):
+            digest = hashlib.sha256(f"{previous}\n{row['body']}".encode()).hexdigest()
+            if row["prev_hash"] != previous or row["event_hash"] != digest:
+                return False
+            previous = digest
+        return True
+
+    def event_page(self, *, after=0, through=None, limit=500):
+        """Freeze a journal head so concurrent appends cannot truncate an export."""
+        if not 0 <= after < 2**63 or not 1 <= limit <= 500:
+            raise ValueError("invalid event cursor")
+        with self.transaction() as db:
+            head = db.execute("SELECT seq, event_hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
+            head_seq = head["seq"] if head else 0
+            if through is not None:
+                if not 0 <= through <= head_seq:
+                    raise ValueError("invalid event head")
+                head_seq = through
+                head = db.execute("SELECT seq, event_hash FROM events WHERE seq=?", (through,)).fetchone()
+                if through and head is None:
+                    raise ValueError("missing event head")
+            if after > head_seq:
+                raise ValueError("cursor beyond journal head")
+            rows = db.execute("SELECT * FROM events WHERE seq > ? AND seq <= ? ORDER BY seq LIMIT ?",
+                              (after, head_seq, limit)).fetchall()
+            events = [{"seq": row["seq"], **json.loads(row["body"]),
+                       "prev_hash": row["prev_hash"], "event_hash": row["event_hash"]} for row in rows]
+            next_after = rows[-1]["seq"] if rows else after
+            return {"events": events, "chain_valid": self._verify_prefix(db, head_seq),
+                    "head_seq": head_seq, "head_hash": head["event_hash"] if head else GENESIS,
+                    "next_after": next_after, "has_more": next_after < head_seq}

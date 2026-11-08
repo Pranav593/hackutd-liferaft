@@ -49,6 +49,12 @@ class ResumeEvidence(WireModel):
     sha256: Digest
 
 
+class EventCursor(WireModel):
+    after: int = Field(default=0, ge=0, lt=2**63, strict=True)
+    through: int | None = Field(default=None, ge=0, lt=2**63, strict=True)
+    limit: int = Field(default=500, ge=1, le=500, strict=True)
+
+
 class APIError(Exception):
     def __init__(self, status, code):
         self.status = status
@@ -78,7 +84,8 @@ def application(repository, credentials, *, drills=False):
         action, job, args = request.action, request.job, request.args
         if action == "doctor" and job is None and not args:
             repository.ping()
-            return {"auth": True, "database": True, "role": role, "checkpoint_transfer": "signed-v1"}
+            return {"auth": True, "database": True, "role": role, "checkpoint_transfer": "signed-v1",
+                    "event_export": "paged-v1"}
         if job is None:
             raise APIError("422 Unprocessable Entity", "JOB_REQUIRED")
         worker = DEVICE_IDS.get(role)
@@ -106,10 +113,9 @@ def application(repository, credentials, *, drills=False):
             allowed({"operator"})
             if action == "status" and not args:
                 return repository.execute(job, lambda policy: policy.status(job))
-            if action == "events" and not args:
-                return repository.execute(job, lambda policy: {
-                    "chain_valid": policy.verify_chain(), "events": policy.events(limit=500),
-                })
+            if action == "events":
+                cursor = EventCursor.model_validate(args)
+                return repository.execute(job, lambda policy: policy.event_page(**cursor.model_dump()))
             if action == "rescue" and drills and set(args) == {"request_id"}:
                 request_id = TypeAdapter(UUID).validate_python(args["request_id"])
                 return repository.execute(job, lambda policy: policy.request_rescue(job, request_id))

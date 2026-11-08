@@ -752,3 +752,18 @@
   test_atlas_transactions.py. Live rollback remains gated on isolated test Atlas.
 - No hardware, production database or credentials touched. Next: complete,
   paginated event export without silently truncating recovery evidence.
+
+### 2026-11-08 — Autonomous software update 7 — Phase 3 complete journal exports
+
+- Replaced silent 500-event truncation with snapshot-head pagination (head sequence
+  and hash). CLI events fetches all bounded pages and independently recomputes
+  hashes, sequence, unique event IDs and exact job identity before printing.
+- Concurrent appends stay outside the captured head. Invalid/stuck cursors, changed
+  heads, oversized exports and older unpaged servers fail explicitly.
+- Files: coordinator.py, cloud_api.py, cloud.py, evidence.py, test_event_export.py,
+  test_cloud.py. Ran `.venv` Python `-m unittest discover -s tests -p
+  test_event_export.py -v`: 4/4 in 0.684 s; test_cloud.py: 8/8 in 2.526 s;
+  `git diff --check` passed. 515-event synthetic journal plus concurrent append
+  verified; no production events changed.
+- Hash verification is tamper detection, not remote attestation. Hosted paged
+  endpoint NOT_RUN; next: shared evidence loader and deterministic handoff brief.

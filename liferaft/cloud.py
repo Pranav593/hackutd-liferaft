@@ -119,6 +119,40 @@ class CloudClient:
         except (KeyError, TypeError, ValueError):
             raise RuntimeError(f"invalid coordinator response during {action}") from None
 
+    def export_events(self, job):
+        from .evidence import verify_journal
+
+        events = []
+        cursor = 0
+        head = None
+        head_hash = None
+        for _ in range(32):
+            page = self.call("events", job, **({"after": cursor, "through": head} if head is not None else {}))
+            if not isinstance(page, dict) or page.get("chain_valid") is not True:
+                raise ValueError("coordinator journal verification failed")
+            if head is None:
+                head, head_hash = page.get("head_seq"), page.get("head_hash")
+                if head is None:
+                    raise ValueError("coordinator needs paged-v1 event export; update server before exporting")
+            if (page.get("head_seq"), page.get("head_hash")) != (head, head_hash):
+                raise ValueError("event journal head changed during export")
+            batch = page.get("events")
+            if not isinstance(batch, list):
+                raise ValueError("invalid event page")
+            events.extend(batch)
+            if len(json.dumps(events)) > 2 * 1024 * 1024:
+                raise ValueError("event export exceeds size cap")
+            next_after = batch[-1]["seq"] if batch else cursor
+            if page.get("next_after") != next_after or (page.get("has_more") and next_after <= cursor):
+                raise ValueError("event pagination did not advance")
+            cursor = next_after
+            if page.get("has_more") is False:
+                result = {"chain_valid": True, "events": events, "complete": True,
+                          "head_seq": head, "head_hash": head_hash}
+                verify_journal(result, job)
+                return result
+        raise ValueError("event export page budget exceeded")
+
 
 class CloudWorkerCoordinator:
     def __init__(self, client, store):
@@ -228,7 +262,7 @@ def run(args):
             fields = spec.model_dump(mode="json")
         if action == "rescue":
             fields = {"request_id": str(uuid4())}
-        result = client.call(action, job, **fields)
+        result = client.export_events(job) if action == "events" else client.call(action, job, **fields)
         log(f"CLOUD_{action.upper()}", job_id=job, result=result)
         return 0
     except (RuntimeError, ValueError, OSError) as error:
