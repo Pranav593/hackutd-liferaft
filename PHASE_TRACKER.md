@@ -1,5 +1,66 @@
 # LIFERAFT — Codex phase tracker and real progress log
 
+## 2026-11-08 — Launch kit, step 2: website — local delivery
+
+- Scope: user-requested launch page first, followed by slides. Existing Phases
+  0/1 are already DONE; no training or hardware changes for this launch task.
+- Architecture: buildless static `launch/dist` beside the local-only cockpit;
+  build-time screenshots/recording only, no public API client or live embed.
+- Files: `launch/dist/{index.html,style.css,app.js,assets/*}`, `launch/README.md`,
+  `scripts/{capture-launch,encode-launch,check-launch}.cjs`. Existing dirty
+  cockpit changes and frozen API/contracts were preserved.
+- Commands actually run: `node scripts/capture-launch.cjs` PASS (4 screenshots,
+  100 frames); `node scripts/encode-launch.cjs` PASS (10 s, 1440×1000 VP8 WebM,
+  ~331 KiB); `node scripts/check-launch.cjs` PASS (4 viewports: 1440/768/390/320,
+  no horizontal overflow, no serious/critical axe violations, reduced motion
+  pauses video, keyboard skip works, no private API requests or iframes).
+- Preview command: `.venv/Scripts/python.exe -m http.server 4173 --bind
+  127.0.0.1 --directory launch/dist`. Served locally; browser preview opened.
+- Current fixture is 20 events, checkpoint 30 → step 31; media does not use
+  stale 32 → 33 numbers from earlier docs. Visible disclosures retain local
+  evidence, injected drill and replay boundaries; trust copy explains anchoring.
+- User supplied GitHub and Devpost event URLs plus crew name LifeRaft. Email
+  remains unknown: mailto draft has no invented recipient and says so visibly.
+- User explicitly requested local-only publication. No deployment performed;
+  no public URL exists. Local preview cannot serve a phone-scanned QR.
+- Cannot test physical drill, provider delivery, cross-device identity, or new
+  checkpoint byte verification from this static-media task. No such claims.
+- Next: nine-slide navy/teal/amber deck, timed speaker notes, local-preview QR.
+
+## 2026-11-08 — Launch kit, step 1: presentation — delivered
+
+- Completed after step 2 per user order. Nine slides with navy/black backgrounds,
+  teal continuity, amber risk, scenario disclosure, actual ESP32 photo, original
+  patch, NEXT roadmap, and the requested closing line. Speaker notes target
+  120 seconds plus the demo and explain the pull cord/operator/mission control
+  ritual. Actual rehearsal time and live hardware demo were NOT_RUN.
+- Files: `launch/presentation/{build.mjs,README.md,liferaft-launch.pptx}`.
+- Authoring command: bundled Node `launch/presentation/build.mjs`, with
+  `LIFERAFT_NODE_MODULES`, `LIFERAFT_PRESENTATIONS_SKILL`, and
+  `LIFERAFT_RUNTIME_PYTHON` set to workspace dependency-loader paths.
+- First finalizer attempt failed because its import subprocess needed
+  `RUNTIME_NODE_MODULES`; corrected the wrapper. Second attempt returned a
+  complete PASS receipt: 9 slides, 0 package/geometry findings, approved
+  Arial/Georgia fonts, successful first-party re-import; output 600299 bytes,
+  SHA-256 `cfec50297691ca4ee38aaa7f244e5bb396c18550f3fa0f49a83bbe62f4bd6362`.
+  That wrapper still exited 1 after producing the PASS receipt; source now
+  normalizes exitCode only after those successful validation fields. The
+  final artifact itself passed all checks; no failed check was bypassed.
+- Inspected all 9 original PNGs individually. Native Google Slides import
+  succeeded, then readback confirmed 9 slides, 9 notes pages, editable text,
+  and all 3 expected image assets. Inspected all 9 Google-rendered thumbnails
+  individually; text/image layout preserved. No PowerPoint UI check claimed.
+- Native deliverable: https://docs.google.com/presentation/d/1mrTBEsA5OmEym0pYkag8l_cDQqtdVtel6jP3yr9eTG0/edit
+  moved into the connected user's existing ChatGPT folder.
+- User requested local-only website. QR therefore visibly says LOCAL PREVIEW
+  and points to 127.0.0.1:4173. It cannot work on a phone; replace it only after
+  an approved deployment provides a verified public URL. Pilot email remains
+  missing; no contact address invented. No provider/hardware actions performed.
+- `node scripts/check-launch.cjs` final run PASS: 4 viewports, zero axe
+  violations, 10 s video decoded, reduced motion and keyboard checks pass,
+  screenshots loaded and inspected. `git diff --check` PASS (line-ending notices
+  only). Remaining action: supply pilot email; publish only if later approved.
+
 **Current status:** Phases 0–2 have local numerical/process proof, and recorded campus drills demonstrate real two-laptop recovery and physical-button delivery. Phase 7's live Nemotron demo is verified. Phase 3's signed transfers, paged evidence exports and per-job doctor are software-tested; their new hosted/live Atlas gates remain open. The Pi worker, edge monitor, adaptive scheduling, extended Nemotron tooling and Photon queue are implemented in software. The Next.js cockpit can replay verified saved journals locally. Physical Pi/sensor/OLED integration and Photon gates remain as listed below.
 
 ## Workflow rules

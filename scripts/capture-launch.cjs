@@ -11,7 +11,7 @@ const replay = require('../web/fixtures/replay.local-job.json');
   const context = await browser.newContext({viewport:{width:1440,height:1000}, deviceScaleFactor:1});
   const page = await context.newPage();
   await page.route('**/api/replay', route => route.fulfill({json:{replay}}));
-  await page.goto(process.env.LIFERAFT_CAPTURE_URL || 'http://127.0.0.1:3001', {waitUntil:'networkidle',timeout:45000});
+  await page.goto(process.env.LIFERAFT_CAPTURE_URL || 'http://127.0.0.1:3001/?gl=off', {waitUntil:'networkidle',timeout:45000});
   await page.getByRole('button',{name:'Explore recovery proof',exact:true}).waitFor();
   await page.screenshot({path:path.join(dir,'cockpit.png')});
   for (const [name,file] of [['Explore workers and handoff','topology'],['Explore recovery proof','proof'],['Explore the handoff brief and investigation','brief']]) {
