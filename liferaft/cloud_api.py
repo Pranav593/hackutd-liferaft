@@ -160,7 +160,7 @@ def application(repository, credentials, *, drills=False):
         status = "200 OK"
         try:
             route = (environ["REQUEST_METHOD"], environ["PATH_INFO"])
-            if route == ("GET", "/healthz"):
+            if route[0] in {"GET", "HEAD"} and route[1] == "/healthz":
                 payload = {"ready": True}
             elif route == ("POST", "/v1/control"):
                 bearer = environ.get("HTTP_AUTHORIZATION", "").removeprefix("Bearer ")
@@ -198,7 +198,7 @@ def application(repository, credentials, *, drills=False):
             data = json.dumps({"error": "COORDINATOR_UNAVAILABLE", "request_id": request_id}).encode()
         start_response(status, [("Content-Type", "application/json"),
                                 ("Content-Length", str(len(data))), ("Cache-Control", "no-store")])
-        return [data]
+        return [b"" if environ["REQUEST_METHOD"] == "HEAD" else data]
 
     return handle
 

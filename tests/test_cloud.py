@@ -60,6 +60,20 @@ class CloudTests(unittest.TestCase):
         self.assertEqual(code, 200, body)
         return body["result"]
 
+    def test_public_health_supports_head_monitors(self):
+        def check(method):
+            responses = []
+            result = self.app({"REQUEST_METHOD": method, "PATH_INFO": "/healthz"},
+                              lambda status, headers: responses.append((status, dict(headers))))
+            status, headers = responses[0]
+            return status, headers, b"".join(result)
+
+        status, headers, body = check("GET")
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(json.loads(body), {"ready": True})
+        self.assertEqual(headers["Content-Length"], str(len(body)))
+        self.assertEqual(check("HEAD"), (status, headers, b""))
+
     def test_auth_and_input_boundaries(self):
         self.assertEqual(self.request("doctor", None, role="unknown")[0], 401)
         self.assertEqual(self.request("doctor", None, sent_at=time.time() - 31)[0], 409)

@@ -6,7 +6,7 @@ Liferaft runs the coordinator on Render and stores job state and private checkpo
 
 1. Sign in to [MongoDB Atlas](https://cloud.mongodb.com/) and create a project named `Liferaft` in a team-controlled organization. If you already have a dedicated Liferaft project, reuse it.
 2. Choose **Database → Create** or **Build a Cluster**. Select **Free**, name it `liferaft-demo`, and choose a nearby US region. Skip sample data. Confirm the Free tier before creating.
-3. Under **Security → Database & Network Access → Database Users**, add a password user named `liferaft-coordinator`. Use a strong random alphanumeric password and save it in your password manager. Under **Specific Privileges**, select the database role `readWrite` for database `liferaft` only. Restrict the user to the `liferaft-demo` cluster if Atlas offers the toggle. If Atlas created a broad setup user for this project, use the scoped user for the service.
+3. Under **Security → Database & Network Access → Database Users**, add a password user named `liferaft-coordinator`, or edit that user if it exists. For a new user, use a strong random alphanumeric password and save it in your password manager. Under **Specific Privileges**, select `readWrite`, enter `liferaft` in **Database**, and leave **Collection** blank so the service can access `job_state_v1` and `checkpoint_objects_v1`. Restrict the user to the `liferaft-demo` cluster if Atlas offers the toggle. After saving, the roles list should show `readWrite @ liferaft`. Use this scoped user in Render.
 4. From the cluster, open **Connect → Drivers → Python**. Copy the `mongodb+srv://…` URI and replace the username and password placeholders with this database user's credentials. Keep it private in your password manager until step 3. The URI is only for Render.
 5. Confirm the cluster is available and the scoped user is listed. If the connection wizard asks you to add a network entry now, leave it pending and return after Render supplies its IP ranges. Avoid an all-addresses entry such as `0.0.0.0/0`.
 
@@ -55,6 +55,7 @@ You should see all three filenames from `git check-ignore`. Open each file in yo
 
 4. In the new Render service, choose **Connect → Outbound** and copy all listed CIDR ranges. In Atlas, go to **Security → Database & Network Access → IP Access List → Add IP Address**. Add each range separately and wait until the entries are active. The worker laptops' IP addresses are unnecessary.
 5. Wait for Render to show **Live**. Open the public service origin with `/healthz` appended. The expected response is `{"ready": true}`, which confirms the web process is up. The authenticated doctor below checks Atlas connectivity. If Free Render went idle, open the health URL and allow the service to wake before starting the workers.
+6. For UptimeRobot, point an HTTP(S) monitor at the public `/healthz` URL. Its free HTTP monitor uses `HEAD`. After deploying a revision that supports that method, `curl -fsSI https://liferaft-coordinator.onrender.com/healthz` should report HTTP 200, and the monitor should show **Up** after a successful probe.
 
 If Render cannot see the repo, grant that repo access in the Render GitHub app settings. If Atlas auth fails, compare the URI placeholders, database user, and Render outbound CIDRs in their dashboards. If the host remains unavailable, run the local demo while diagnosing it. Keep the service on the Free tier.
 
@@ -62,11 +63,17 @@ Sources [Docker deploys](https://render.com/docs/docker) · [Render Free limits]
 
 ## 4. Verify recovery on two laptops
 
-Both laptops need the Phase 3 branch and the Python and CPU PyTorch setup in [README.md](../README.md). Verify `doctor --training --json --redact` reports `cpu_verified: true` on each. Keep both laptop clocks set automatically. On Windows use `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+Both laptops need the Phase 3 code, now on `main`, and the Python and CPU PyTorch setup in [README.md](../README.md). In Terminal, open the repository folder and run:
+
+```sh
+.venv/bin/python -m liferaft doctor --training --json --redact
+```
+
+Check for `"cpu_verified": true`. If your prompt already shows `(.venv)`, you can use `python -m liferaft` instead of `.venv/bin/python -m liferaft`. On Windows use `.venv\Scripts\python.exe` in place of `.venv/bin/python`. Keep both laptop clocks set automatically.
 
 Fill in `LIFERAFT_CLOUD_URL` in the profiles with the same public Render origin, for example `https://liferaft-coordinator.onrender.com`. On Laptop B, create only `.env.standby` using that URL and the standby token. Laptop A needs `.env.operator` and `.env.primary`.
 
-Run these checks. The expected response is `auth: true`, `database: true`, and the matching role.
+Before starting either worker, open the public Render URL with `/healthz` appended. Wait for `{"ready": true}`, then run the following in the laptops’ normal terminals. The expected response is `auth: true`, `database: true`, and the matching role. This confirms the Atlas ping. Job creation and the checkpoint drill verify the collection permissions. HTTP 401 means that profile's token does not match its Render environment variable. For HTTP 503, check the Render service logs, Atlas URI, IP access list, and database privileges.
 
 ```sh
 # Laptop A
@@ -91,20 +98,26 @@ Then run the drill.
    .venv/bin/python -m liferaft cloud --profile standby worker --role standby --job campus-drill-01
    ```
 
-3. **Laptop A, separate terminal.** Start the primary.
+3. **Laptop A, operator terminal.** Verify Laptop B is ready. The result must include `"standby_ready": true`. If it is false, check Laptop B's terminal before proceeding.
+
+   ```sh
+   .venv/bin/python -m liferaft cloud --profile operator status --job campus-drill-01
+   ```
+
+4. **Laptop A, separate terminal.** Start the primary.
 
    ```sh
    .venv/bin/python -m liferaft cloud --profile primary worker --role primary --job campus-drill-01
    ```
 
-4. **Laptop A, operator terminal.** Once the primary reaches at least step 20 and while it is still running, request the injected drill.
+5. **Laptop A, operator terminal.** Once the primary reaches at least step 20 and while it is still running, request the injected drill.
 
    ```sh
    .venv/bin/python -m liferaft cloud --profile operator rescue --job campus-drill-01
    .venv/bin/python -m liferaft cloud --profile operator status --job campus-drill-01
    ```
 
-5. On Laptop B, look for `STANDBY_CHECKPOINT_RESTORED` followed by `TRAINING_STEP_COMPLETED` at the checkpoint step plus one. Once Laptop B finishes, rerun status. The expected fields are `state: COMPLETED`, `owner: laptop-standby`, `epoch: 2`, and `last_step: 200`. Export the redacted timeline to the ignored local state directory.
+6. On Laptop B, look for `STANDBY_CHECKPOINT_RESTORED` followed by `TRAINING_STEP_COMPLETED` at the checkpoint step plus one. Once Laptop B finishes, rerun status. The expected fields are `state: COMPLETED`, `owner: laptop-standby`, `epoch: 2`, and `last_step: 200`. Export the redacted timeline to the ignored local state directory.
 
    ```sh
    .venv/bin/python -m liferaft cloud --profile operator events --job campus-drill-01 > .liferaft/campus-drill-01.jsonl
