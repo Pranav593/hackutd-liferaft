@@ -681,3 +681,16 @@
 - Ran `.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_cloud_boundaries.py -v`: 2/2 passed; `git diff --check` passed.
 - No live service or hardware action. Hosted/Atlas checks remain opt-in; no human
   action requested in this software-only session. Next: expiring private transfers.
+
+### 2026-11-08 — Autonomous software update 2 — Phase 3 capabilities
+
+- Added HMAC-SHA256 transfer capabilities with a fixed 20-second lifetime,
+  exact manifest/role/method binding, credential rotation invalidation, bounded
+  parsing and future/expired-token rejection. URL alone will not authenticate.
+- Files: liferaft/transfers.py, tests/test_transfers.py. No new dependency/key.
+- Ran `python -m unittest discover -s tests -p test_transfers.py -v` using
+  .venv Python: 2/2 passed; `git diff --check` passed. Baseline full suite:
+  33 tests in 81.383 s, 31 passed, 2 opt-in cloud tests skipped; same-host real
+  200-step training resume starts at 121, maximum loss difference 0.0.
+- Capability module is not yet wired to HTTP. Live Atlas and new distributed
+  transfers are NOT_RUN. Hardware untouched. Next: atomic binary transfer API.
