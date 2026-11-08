@@ -56,6 +56,10 @@ class LocalArtifactStore:
 def verified_bytes(path: Path, manifest: CheckpointManifest) -> bytes:
     with path.open("rb") as stream:
         data = stream.read(MAX_CHECKPOINT_BYTES + 1)
+    return verify_data(data, manifest)
+
+
+def verify_data(data: bytes, manifest: CheckpointManifest) -> bytes:
     if len(data) != manifest.size_bytes:
         raise IntegrityError("checkpoint byte count mismatch")
     if not hmac.compare_digest(hashlib.sha256(data).hexdigest(), manifest.sha256):

@@ -28,7 +28,7 @@ You do **not** need to connect Pi/laptops directly to each other. Each runs outg
 
 ### Human actions
 
-1. On **each laptop**, connect to an internet network and open a normal browser to `https://supabase.com` and `https://build.nvidia.com`. The page must load.
+1. On **each laptop**, connect to an internet network and open a normal browser to `https://www.mongodb.com` and `https://build.nvidia.com`. The page must load.
 2. If Pi 5 connects to campus Wi-Fi, confirm it can browse/public HTTPS from its own shell (Codex provides `liferaft doctor --network` after login). If school enterprise sign-in or network policy prevents Pi joining, connect Pi to a **permitted personal hotspot or travel router** instead. Campus policy takes precedence.
 3. You may use different networks for different devices; that is fine as long as all have internet access. A laptop on campus Wi-Fi and Pi on a phone hotspot can still communicate by cloud relay.
 4. Do not ask campus IT for opened inbound ports; we don't need them. Do not run `nc`, expose server to all interfaces or try campus port-forwarding for the primary path.
@@ -49,31 +49,17 @@ If a network blocks service URLs, use another allowed network or team hotspot. I
 Install (as Codex directs via OS-specific verified methods):
 
 1. **Git** — downloads/updates code so team members share one project.
-2. **Python 3.11+** — runs training, Pi worker and telemetry bridge. Codex chooses a pinned Python version compatible with chosen PyTorch/Supabase packages.
+2. **Python 3.11+** — runs training, Pi worker and telemetry bridge. Codex chooses a pinned Python version compatible with chosen PyTorch and cloud packages.
 3. **Node.js current supported LTS** — runs Next.js dashboard. Codex checks which version its chosen Next.js version requires.
 4. **Code editor/Codex** — runs the development workflow; use one repository, separate folders/branches as appropriate.
 5. **USB device drivers**, only if necessary — ESP32-S3 board revision determines if a USB-UART driver is needed. Codex identifies connector/port/VID:PID, then gives exact driver link and instructions.
 
 **Verification:** Codex runs `python --version`, `git --version`, `node --version`, `npm --version`, and an installation/doctor script. You should see versions, not `command not found`. Do not manually guess version numbers.
 
-## 4. Create cloud coordination and checkpoint storage (Supabase)
+## 4. Create cloud coordination and checkpoint storage
 
-**What it is:** A hosted database stores which worker is active, and private file storage holds checkpoint bytes. Each computer connects to it from the outside; this is why campus isolation isn't a blocker.
-
-**Human action, step by step:**
-
-1. Open `https://supabase.com/dashboard` and sign in/create a team-controlled account.
-2. Choose **New Project** (wording may vary slightly). Select your organization or create one, enter project name `liferaft-demo`, choose a strong database password, and select an available region. Keep this password in your password manager; **do not send it to Codex or commit it**.
-3. Review whether the plan shows a charge. Use a free/no-charge plan if available and compatible. Do not add payment details unless explicitly approved.
-4. After project provisioning, open project **Settings → API** (or the current equivalent). Copy the **Project URL** into the untracked `.env` as `SUPABASE_URL`. Copy the **publishable key** into `SUPABASE_PUBLISHABLE_KEY` if Codex uses client-auth APIs. A publishable key is not the same as an admin secret.
-5. **Secret/service-role key:** do **not** put this in any browser `NEXT_PUBLIC_*` variable, Raspberry Pi file, ESP32 firmware or frontend. When Codex deploys the hosted Edge Function, use the Supabase project's secure **Edge Function Secrets** settings or CLI secret-setting workflow. Codex must explain the exact command/UI at that point. Do not paste the value into chat.
-6. Codex will create migration SQL, RLS policies, storage bucket and Edge Functions. Only run vetted generated migration commands against the **correct project**, after Codex displays a migration summary in beginner language. Never paste arbitrary SQL that disables RLS or makes checkpoint files public.
-7. Codex sets scoped device tokens for Pi, standby and operator and writes them to local untracked `.env` on their respective machines; no shared one-size-fits-all public token.
-8. Ensure the checkpoint bucket `liferaft-checkpoints` is marked **private** in the Storage UI. Do not upload sensitive personal files—demo checkpoints use generated data only.
-
-**Verification:** Codex runs server-side tests for authenticated worker heartbeat, immutable checkpoint upload/download, read/write denial with wrong credentials, anonymous denial, and atomic job-lease transfer. It shows only redacted request headers/IDs, never tokens.
-
-**Possible blocker:** Some free plans temporarily pause idle projects or enforce storage/function limits. Codex should detect failures and provide a supported alternative hosting path without asking humans to solve architecture. No automatic paid upgrade.
+Use the [Phase 3 Atlas and Render setup guide](docs/PHASE_3_ATLAS_SETUP.md) for
+account setup, scoped credentials, deployment and the two-laptop drill.
 
 ## 5. Get an NVIDIA Nemotron API key
 

@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 
 from .contracts import utc_now
 
-SECRET_KEY = re.compile(r"authorization|password|secret|token|cookie|api.?key|service.?role|signed.?url|phone|destination", re.I)
-SECRET_TEXT = re.compile(r"https?://[^\s\"']+|\b(?:bearer\s+[^\s,;]+|(?:pho_sk_|nvapi-|sb_secret_)[\w-]+)|(?<!\w)\+\d{8,15}\b", re.I)
+SECRET_KEY = re.compile(r"authorization|password|atlas.?uri|secret|token|cookie|api.?key|service.?role|signed.?url|phone|destination", re.I)
+SECRET_TEXT = re.compile(r"(?:https?|mongodb(?:\+srv)?)://[^\s\"']+|\b(?:bearer\s+[^\s,;]+|(?:pho_sk_|nvapi-|sb_secret_)[\w-]+)|(?<!\w)\+\d{8,15}\b", re.I)
 
 
 def load_environment() -> None:

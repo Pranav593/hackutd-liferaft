@@ -19,16 +19,9 @@ Expected: real numerical loss, checkpoint SHA and resume step, not a fake UI. Fa
 
 ## B. Cloud workspace bring-up
 
-```bash
-# Only after human creates team Supabase account and puts scoped secrets in local env.
-liferaft doctor --cloud --redact
-liferaft cloud test-auth
-liferaft cloud test-private-storage
-liferaft cloud test-lease
-liferaft cloud test-checkpoint-roundtrip
-```
-
-Expected: authenticated operations, private storage, signed URL verification, only one lease owner. No direct `ping` between classmates' machines required.
+Follow the [Phase 3 Atlas and Render setup guide](docs/PHASE_3_ATLAS_SETUP.md) for
+hosted setup, authenticated readiness checks and the two-laptop recovery drill.
+Each laptop connects to the coordinator over HTTPS.
 
 ## C. Pi 5 primary worker (preferred)
 

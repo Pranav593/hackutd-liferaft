@@ -1,0 +1,6 @@
+*
+!liferaft/
+!liferaft/**
+liferaft/**/__pycache__/
+!requirements-foundation.lock
+!requirements-cloud.lock

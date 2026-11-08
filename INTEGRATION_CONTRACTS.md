@@ -1,6 +1,6 @@
 # LIFERAFT — Engineering contracts: workers, cloud, checkpoints, agents, hardware and messaging
 
-**Status:** Normative design contract for Codex to implement; example paths are **our proposed LIFERAFT endpoints**, not undocumented endpoints claimed to exist at Supabase, Photon or NVIDIA. Verify all provider SDK methods and edge deployment syntax in their official current docs.
+**Status:** Normative design contract for Codex to implement; example paths are **our proposed LIFERAFT endpoints**, not undocumented endpoints claimed to exist at Atlas, Photon or NVIDIA. Verify all provider SDK methods and hosting instructions in their official current docs.
 
 ## 1. Design principles
 
@@ -13,7 +13,7 @@
 
 ## 2. Identity and authorization
 
-Actors: `primary_worker`, `standby_worker`, `operator`, `sensor_gateway`, `coordinator`, `nemotron_agent`, `photon_adapter`. Every caller has specific role claims and a separate secret/token; issuer, expiry, scopes and revocation defined server-side. Hosted Edge Function validates bearer/device credential using constant-time comparison or authenticated JWT verification and maps it to an allowlisted `device_id`/role. Supabase service-role/admin key stays only in hosted runtime. Frontend gets publishable key and appropriately scoped auth only.
+Actors: `primary_worker`, `standby_worker`, `operator`, `sensor_gateway`, `coordinator`, `nemotron_agent`, `photon_adapter`. Every caller has specific role claims and a separate secret/token; issuer, expiry, scopes and revocation defined server-side. The hosted coordinator validates bearer/device credential using constant-time comparison or authenticated JWT verification and maps it to an allowlisted `device_id`/role. The Atlas database URI stays only in the hosted runtime. The frontend uses appropriately scoped coordinator auth.
 
 **Scopes:** worker only posts heartbeat/progress/checkpoint for assigned jobs; standby claims only under atomic policy; gateway may submit sensor events but never claim ownership; dashboard reads scoped data; operator may inject explicit demo fault only when demo mode is enabled and may acknowledge incidents; agent tools are read-only; Photon inbound commands are limited to status and ACK.
 
@@ -21,7 +21,7 @@ For each device key, allow server-side rotation; redact authorization headers. R
 
 ## 3. Suggested cloud API surface
 
-Use a Supabase Edge Function gateway deployed at a project-specific **generated** URL similar to `/functions/v1/liferaft-control` (verify actual deployment URL). Worker sends JSON action names inside POST body or routes within Edge Functions according to Codex preference. The following are **LIFERAFT-defined** actions and guarantees:
+Use the hosted coordinator's `POST /v1/control` action endpoint. Worker credentials and requests are checked by the coordinator. The table lists logical operations and their guarantees.
 
 | Action / logical endpoint | Caller | Request | Response | Invariant |
 |---|---|---|---|---|
@@ -140,9 +140,9 @@ The hash above is a **placeholder** and must never be presented as a computed re
 
 All numbers above are illustrative schema test fixtures, not actual demo results. The UI reads data from live cloud queries and actual worker results.
 
-## 5. Database schema — minimum table set
+## 5. Persistence and ownership
 
-Prefer Postgres with these normalized tables and explicit foreign keys:
+The logical data model is below. Phase 3 stores each job's bounded policy snapshot and hash-chained journal in one private Atlas document and immutable bytes in a separate collection. A snapshot transaction commits both together on upload. Workers access only the HTTPS coordinator.
 
 | Table | Key columns | Constraints / indexes |
 |---|---|---|
@@ -155,7 +155,7 @@ Prefer Postgres with these normalized tables and explicit foreign keys:
 | `message_events` | `provider_event_id`, `incident_id`, `direction`, `channel`, `delivery_state`, `contact_hash`, `created_at` | dedupe unique provider_event_id |
 | `device_identities` | `device_id`, `role`, `credential_hash/identifier`, `active`, `rotated_at` | server-only read; no exposed secret |
 
-Build state transitions as SQL functions or Edge Function+transaction. Enable RLS on all exposed tables; **never use permissive `USING (true)` policies** as hackathon shortcut. Keep device secret checking server-side; scope operators to one demo project. SQL migration includes explicit rollback test plan and does not touch any unrelated database resources.
+The coordinator runs all transitions and commits accepted mutations in an Atlas transaction. Concurrent writes to the same job conflict and rerun against current state within a bounded deadline. The Atlas credential is scoped to the dedicated Liferaft database.
 
 ### Transactional ownership function behavior
 
@@ -192,7 +192,7 @@ A later `mark_first_resumed_step` verifies the reported new step is actually `ch
 
 ## 7. Training/checkpoint proof artifacts
 
-Manifest fields must align exactly across Python worker, Edge Function DB and TypeScript UI. Create a codegen or schema snapshot test so a field rename breaks tests early. Use JSON Schema where possible. Define `RunId`, `JobId`, `WorkerId`, `IncidentId` and `CheckpointId` as distinct nominal types in TS to avoid accidental mixing.
+Manifest fields must align exactly across Python worker, hosted coordinator and TypeScript UI. Create a codegen or schema snapshot test so a field rename breaks tests early. Use JSON Schema where possible. Define `RunId`, `JobId`, `WorkerId`, `IncidentId` and `CheckpointId` as distinct nominal types in TS to avoid accidental mixing.
 
 For training, persist full **safe** checkpoint state (model/optimizer, RNG, dataset cursor). `torch.save` uses pickle-based serialization; only restore private owned files after hash, identity and type checks; see current PyTorch `weights_only` handling. Checkpoint `sha256` is computed over the raw `.pt` bytes and stored in separate signed/authenticated manifest. Failed restore must not erase last good file.
 

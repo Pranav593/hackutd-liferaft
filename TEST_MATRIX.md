@@ -106,7 +106,7 @@
 
 Run at least **three** complete controlled rescue cycles after hardware integration. For each:
 
-1. Reset **only project-owned job and incident state** with the documented safe reset command. Do not wipe system disks or entire Supabase tables that might contain other projects.
+1. Reset **only project-owned job and incident state** with the documented safe reset command. Do not wipe system disks or entire Atlas collections that might contain other projects.
 2. Start Pi primary worker (or label laptop fallback), Laptop A standby, Laptop B sensor bridge/console, and cloud coordinator.
 3. Wait for a real `COMMITTED` checkpoint. Observe `pi_cpu_temp_c`, `ambient_temp_c`, and job loss separately.
 4. Press ESP32 button. Observe one `injected` event, verified preemption and ownership transition. Observe first actual optimizer step on standby.
