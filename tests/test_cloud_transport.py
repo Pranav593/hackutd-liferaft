@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from urllib.error import HTTPError, URLError
 
 from liferaft.artifacts import IntegrityError
-from liferaft.cloud import CloudClient
+from liferaft.cloud import CloudClient, decode_plan
 from liferaft.transfers import issue_ticket
 from test_transfers import fixture_manifest
 
@@ -84,7 +84,30 @@ class TransportTests(unittest.TestCase):
             self.client.call("doctor")
         self.assertEqual(self.client.opener.open.call_count, 3)
         self.client.opener.open.side_effect = None
-        for raw in (b"null", b"[]", b"{}", b"not-json"):
+        for raw in (b"null", b"[]", b"{}", b"not-json", b'{"result":NaN}',
+                    b'{"result":1,"result":2}', b'{"result":1,"unexpected":2}'):
             self.client.opener.open.return_value = io.BytesIO(raw)
             with self.subTest(raw=raw), self.assertRaisesRegex(RuntimeError, "invalid coordinator response"):
                 self.client.call("doctor")
+
+    def test_untrusted_lease_plans_cannot_extend_authority(self):
+        valid = {"action": "RUN", "lease_epoch": 1, "lease_remaining_s": 12.0}
+        self.assertEqual(decode_plan(valid).lease_remaining_s, 12)
+        for fields in ({"action": "EXECUTE"}, {"lease_epoch": True}, {"lease_epoch": 0},
+                       {"lease_remaining_s": float("inf")}, {"lease_remaining_s": float("nan")},
+                       {"lease_remaining_s": 13}, {"lease_remaining_s": 0},
+                       {"lease_remaining_s": "12"}, {"lease_remaining_s": True}, {"shell": "never"}):
+            with self.subTest(fields=fields), self.assertRaises(ValueError):
+                decode_plan(valid | fields)
+
+    @patch("liferaft.cloud.time.sleep")
+    def test_slow_stream_cannot_evade_response_deadline(self, sleep):
+        class SlowResponse(io.BytesIO):
+            def read1(self, size):
+                return b"x"
+
+        self.client.opener.open.return_value = SlowResponse()
+        with patch("liferaft.cloud.time.monotonic", side_effect=[0, 0, 0, 7, 7, 7]):
+            with self.assertRaisesRegex(RuntimeError, "unavailable"):
+                self.client.call("doctor")
+        self.client.opener.open.assert_called_once()

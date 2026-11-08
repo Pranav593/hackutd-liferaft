@@ -7,23 +7,44 @@ import random
 from pathlib import Path
 import tempfile
 import time
+from typing import Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import uuid4
 
 from dotenv import dotenv_values
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 
 from .artifacts import LocalArtifactStore, verify_data
-from .cloud_api import DEVICE_IDS, MAX_BODY, PRIMARY, TOKEN_PATTERN
+from .cloud_api import DEVICE_IDS, MAX_BODY, PRIMARY, TOKEN_PATTERN, unique_keys
 from .config import log, state_dir
-from .contracts import MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier
-from .failover import JobPlan, JobSpec
+from .contracts import MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier, Step, WireModel
+from .failover import LEASE_TTL_S, JobPlan, JobSpec
 
 RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 RETRY_SAFE_ACTIONS = frozenset({"doctor", "spec", "status", "events", "register", "candidates",
                                 "heartbeat", "commit", "rescue", "button", "upload_url", "download_url"})
+
+
+class LeaseResponse(WireModel):
+    action: Literal["RUN", "PAUSE", "STOP"]
+    lease_epoch: Step
+    lease_remaining_s: float = Field(ge=0, le=LEASE_TTL_S, strict=True)
+
+
+def decode_response(raw):
+    def reject_constant(value):
+        raise ValueError("nonfinite JSON")
+
+    return json.loads(raw, object_pairs_hook=unique_keys, parse_constant=reject_constant)
+
+
+def decode_plan(value):
+    plan = LeaseResponse.model_validate(value)
+    if plan.action != "STOP" and (plan.lease_epoch == 0 or plan.lease_remaining_s == 0):
+        raise ValueError("active plan requires a finite current lease")
+    return JobPlan(**plan.model_dump())
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -47,7 +68,10 @@ class CloudClient:
 
     def supports_signed_transfers(self):
         if self._signed_transfers is None:
-            self._signed_transfers = self.call("doctor").get("checkpoint_transfer") == "signed-v1"
+            report = self.call("doctor")
+            if not isinstance(report, dict):
+                raise ValueError("invalid coordinator protocol report")
+            self._signed_transfers = report.get("checkpoint_transfer") == "signed-v1"
         return self._signed_transfers
 
     def _exchange(self, request, *, label, limit, retry_safe):
@@ -60,10 +84,19 @@ class CloudClient:
                 break
             try:
                 with self.opener.open(request, timeout=min(2.0, remaining)) as response:
-                    raw = response.read(limit + 1)
-                    if len(raw) > limit:
-                        raise ValueError("response size cap")
-                    return raw
+                    chunks, size = [], 0
+                    read = getattr(response, "read1", response.read)
+                    while time.monotonic() < deadline:
+                        chunk = read(min(64 * 1024, limit + 1 - size))
+                        if time.monotonic() >= deadline:
+                            raise OSError("response deadline")
+                        if not chunk:
+                            return b"".join(chunks)
+                        size += len(chunk)
+                        if size > limit:
+                            raise ValueError("response size cap")
+                        chunks.append(chunk)
+                    raise OSError("response deadline")
             except HTTPError as error:
                 last_status = error.code
                 error.close()
@@ -96,15 +129,22 @@ class CloudClient:
     def upload_checkpoint(self, manifest, data):
         verify_data(data, manifest)
         offer = self.call("upload_url", manifest.job_id, manifest=manifest.model_dump(mode="json"))
+        if not isinstance(offer, dict) or "signed_url" not in offer:
+            raise ValueError("invalid coordinator upload offer")
         raw = self.transfer(offer["signed_url"], "PUT", data=data, limit=4096)
         try:
-            return json.loads(raw)["result"] is True
+            acknowledgment = decode_response(raw)
+            if acknowledgment != {"result": True} or acknowledgment["result"] is not True:
+                raise ValueError
+            return True
         except (KeyError, TypeError, ValueError):
             raise RuntimeError("invalid checkpoint upload acknowledgment") from None
 
     def download_checkpoint(self, manifest):
         offer = self.call("download_url", manifest.job_id, epoch=manifest.lease_epoch,
                           checkpoint_id=manifest.checkpoint_id)
+        if not isinstance(offer, dict) or "signed_url" not in offer:
+            raise ValueError("invalid coordinator download offer")
         return verify_data(self.transfer(offer["signed_url"], "GET", limit=manifest.size_bytes), manifest)
 
     def call(self, action, job=None, **args):
@@ -115,7 +155,10 @@ class CloudClient:
         })
         raw = self._exchange(request, label=action, limit=MAX_BODY, retry_safe=action in RETRY_SAFE_ACTIONS)
         try:
-            return json.loads(raw)["result"]
+            response = decode_response(raw)
+            if not isinstance(response, dict) or set(response) != {"result"}:
+                raise ValueError
+            return response["result"]
         except (KeyError, TypeError, ValueError):
             raise RuntimeError(f"invalid coordinator response during {action}") from None
 
@@ -163,10 +206,10 @@ class CloudWorkerCoordinator:
         return JobSpec.model_validate(self.client.call("spec", job_id))
 
     def start_primary(self, job_id, worker_id):
-        return JobPlan(**self.client.call("start", job_id))
+        return decode_plan(self.client.call("start", job_id))
 
     def heartbeat(self, request):
-        return JobPlan(**self.client.call("heartbeat", request.job_id, **request.model_dump(mode="json")))
+        return decode_plan(self.client.call("heartbeat", request.job_id, **request.model_dump(mode="json")))
 
     def register_standby(self, job_id, worker_id):
         self.client.call("register", job_id)
@@ -178,7 +221,7 @@ class CloudWorkerCoordinator:
         # Restore/HTTPS latency can exceed the standby freshness window. Renew
         # presence, not ownership; the atomic claim still validates epoch/state.
         self.register_standby(job_id, worker_id)
-        return JobPlan(**self.client.call("claim", job_id, epoch=expected_epoch, checkpoint_id=checkpoint_id))
+        return decode_plan(self.client.call("claim", job_id, epoch=expected_epoch, checkpoint_id=checkpoint_id))
 
     def commit_checkpoint(self, manifest):
         data = self.store.verified_bytes(manifest)

@@ -816,3 +816,18 @@
 - `python -m compileall -q liferaft tests scripts` and `git diff --check` passed.
 - File: tests/test_signed_training.py. No hardware, live service, provider or
   credential changes. Next: final protocol adversarial review and operator docs.
+
+### 2026-11-08 — Autonomous software update 11 — Fail-closed response and lease validation
+
+- Cloud lease plans now validate action allowlist, strict epoch and finite lease
+  duration capped at the coordinator's 12-second TTL. Malformed, zero-duration
+  active, infinite and extra-field plans cannot authorize training.
+- Reject duplicate/nonfinite/unexpected JSON response envelopes, missing transfer
+  offers and malformed upload acknowledgments. Check response deadline while
+  reading bounded chunks so a trickling stream cannot keep extending the read.
+- Files: cloud.py, test_cloud_transport.py. `.venv` Python ran test_cloud_transport.py:
+  8/8 in 0.374 s, and test_signed_training.py: 1/1 in 11.132 s. Signed real
+  training still has zero loss difference and identical final tensors after K+1.
+  Compilation and `git diff --check` passed.
+- Errors/delays are injected fixtures; no actual cloud outage or hardware action.
+  Next: consolidated operator guide, protocol contract and full regression suite.
