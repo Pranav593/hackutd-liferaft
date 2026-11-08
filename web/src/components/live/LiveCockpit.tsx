@@ -123,11 +123,15 @@ export function LiveCockpit() {
   const connected = (Object.keys(roles) as Role[]).every(
     (role) => data?.ready[role],
   );
+  // Matches the coordinator: all agents idle again after the 30 s pickup grace frees the slot.
+  const runAge = data?.run ? Date.now() - data.run.at * 1000 : 0;
+  const idle =
+    data?.run?.phase === "assigned" && runAge >= 30_000 && connected;
   const busy =
     data?.run &&
     data.run.phase !== "failed" &&
-    Date.now() - data.run.at * 1000 <
-      (data.run.phase === "starting" ? 30_000 : 315_000) &&
+    runAge < (data.run.phase === "starting" ? 30_000 : 315_000) &&
+    !idle &&
     !["COMPLETED", "FAILED"].includes(health?.state ?? "");
   const gateway = data?.run?.devices.gateway;
   const armed =

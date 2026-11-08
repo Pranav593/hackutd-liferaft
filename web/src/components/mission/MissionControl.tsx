@@ -194,7 +194,10 @@ export function MissionControl() {
   const health = live?.health;
   const gatewayDev = live?.run?.devices.gateway;
   const armed = gatewayDev?.stage === "armed" && Date.now() - gatewayDev.at * 1000 < 115_000;
-  const busy = !!live?.run && live.run.phase !== "failed" && Date.now() - live.run.at * 1000 < (live.run.phase === "starting" ? 30_000 : 315_000) && !["COMPLETED", "FAILED"].includes(health?.state ?? "");
+  // Matches the coordinator: all agents idle again after the 30 s pickup grace frees the slot.
+  const runAge = live?.run ? Date.now() - live.run.at * 1000 : 0;
+  const idle = !!live?.run && live.run.phase === "assigned" && runAge >= 30_000 && connected;
+  const busy = !!live?.run && live.run.phase !== "failed" && runAge < (live.run.phase === "starting" ? 30_000 : 315_000) && !idle && !["COMPLETED", "FAILED"].includes(health?.state ?? "");
   async function startTraining() {
     setStarting(true);
     setStartError("");

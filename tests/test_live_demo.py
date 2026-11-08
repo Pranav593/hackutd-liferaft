@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 import io
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import time
 import unittest
 from unittest.mock import patch
@@ -93,6 +94,40 @@ class LiveDemoTests(unittest.TestCase):
             trigger = next(event for event in view["replay"]["events"] if event["kind"] == "SENSOR_EVENT_RECEIVED")
             self.assertEqual(trigger["source"], "injected")
             self.assertEqual(view["health"]["state"], "COMPLETED")
+
+    def test_abandoned_run_frees_slot_once_every_agent_is_idle(self):
+        with TemporaryDirectory() as temp:
+            tokens = {**TOKENS, "pi_primary": "e" * 64}
+            opener = WSGIOpener(application(LocalRepository(Path(temp)), tokens, drills=True, live_demo=True))
+            clients = {role: CloudClient("https://offline.test", token) for role, token in tokens.items()}
+            for client in clients.values():
+                client.opener = opener
+            operator = clients["operator"]
+            first, second = "pi-live-abandon-001", "pi-live-abandon-002"
+            instances = {role: str(uuid4()) for role in ("standby", "pi_primary", "gateway")}
+
+            def poll(role, instance):
+                return clients[role].call("demo_poll", instance=instance, readiness="ready")["job"]
+
+            def start(job):
+                return operator.call("demo_start", job, **demo_job_spec(job, PI_PRIMARY).model_dump(mode="json"))
+
+            for role, instance in instances.items():
+                poll(role, instance)
+            start(first)
+            for role, instance in instances.items():
+                self.assertEqual(poll(role, instance), first)
+            # The Pi yields and the button fires; the standby dies mid-training.
+            for role, stage in (("pi_primary", "finished"), ("gateway", "triggered"), ("standby", "training")):
+                clients[role].call("demo_report", first, instance=instances[role], stage=stage, reason=None)
+            later = SimpleNamespace(time=lambda: time.time() + 31)
+            with patch("liferaft.demo_control.time", later):
+                for role in ("pi_primary", "gateway"):
+                    self.assertIsNone(poll(role, str(uuid4())))
+                with self.assertRaisesRegex(RuntimeError, "HTTP 409"):
+                    start(second)
+                self.assertIsNone(poll("standby", str(uuid4())))
+                self.assertEqual(start(second), {"job": second})
 
 
 if __name__ == "__main__":

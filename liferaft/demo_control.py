@@ -6,6 +6,7 @@ SLOT = "live-demo-control"
 ROLES = ("pi_primary", "standby", "gateway")
 READY_SECONDS = 15
 RUN_SECONDS = 315
+GRACE_SECONDS = 30
 STAGES = {"starting", "training", "waiting_checkpoint", "armed", "triggered", "finished", "failed"}
 
 
@@ -38,10 +39,18 @@ def ready_agents(state, now):
             for role in ROLES}
 
 
+def idle(state, now):
+    # Agents stop polling while they run an assignment, so all three ready
+    # after the pickup grace means no device is still working on this run.
+    run = state["run"]
+    return (run is not None and run["phase"] == "assigned" and now - run["at"] >= GRACE_SECONDS
+            and all(ready_agents(state, now).values()))
+
+
 def reserve(state, now, job, replace_job):
     current = state["run"]
     if current and current["phase"] != "failed" and now - current["at"] < (
-            30 if current["phase"] == "starting" else RUN_SECONDS):
+            GRACE_SECONDS if current["phase"] == "starting" else RUN_SECONDS) and not idle(state, now):
         if current["job"] != replace_job:
             raise ValueError("a live demo is already active")
     readiness = ready_agents(state, now)
