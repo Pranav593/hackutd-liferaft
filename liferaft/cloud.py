@@ -19,18 +19,21 @@ from pydantic import Field, TypeAdapter
 from .artifacts import LocalArtifactStore, verify_data
 from .cloud_api import DEVICE_IDS, MAX_BODY, PRIMARY, TOKEN_PATTERN, unique_keys
 from .config import log, state_dir
-from .contracts import MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier, Step, WireModel
+from .contracts import AdaptiveHeartbeat, MAX_CHECKPOINT_BYTES, CheckpointManifest, Identifier, Step, WireModel, utc_now
+from .pi import PI_PRIMARY
 from .failover import LEASE_TTL_S, JobPlan, JobSpec
 
 RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 RETRY_SAFE_ACTIONS = frozenset({"doctor", "spec", "status", "events", "register", "candidates",
-                                "heartbeat", "commit", "rescue", "button", "upload_url", "download_url"})
+                                "heartbeat", "heartbeat_edge", "ambient", "pi_telemetry", "edge_status", "commit", "rescue",
+                                "button", "upload_url", "download_url", "photon_context"})
 
 
 class LeaseResponse(WireModel):
     action: Literal["RUN", "PAUSE", "STOP"]
     lease_epoch: Step
     lease_remaining_s: float = Field(ge=0, le=LEASE_TTL_S, strict=True)
+    checkpoint_interval: int | None = Field(default=None, ge=1, le=10_000, strict=True)
 
 
 def decode_response(raw):
@@ -198,7 +201,8 @@ class CloudClient:
 
 
 class CloudWorkerCoordinator:
-    def __init__(self, client, store):
+    def __init__(self, client, store, *, adaptive=False):
+        self.adaptive = adaptive
         self.client = client
         self.store = store
 
@@ -209,7 +213,9 @@ class CloudWorkerCoordinator:
         return decode_plan(self.client.call("start", job_id))
 
     def heartbeat(self, request):
-        return decode_plan(self.client.call("heartbeat", request.job_id, **request.model_dump(mode="json")))
+        action = "heartbeat_edge" if self.adaptive and isinstance(request, AdaptiveHeartbeat) else "heartbeat"
+        return decode_plan(self.client.call(action, request.job_id, **request.model_dump(
+            mode="json", exclude={"checkpoint_ms", "step_wall_ms"} if action == "heartbeat" else None)))
 
     def register_standby(self, job_id, worker_id):
         self.client.call("register", job_id)
@@ -258,16 +264,24 @@ class CloudWorkerCoordinator:
 
 def install_commands(subcommands):
     cloud = subcommands.add_parser("cloud", help="operate the hosted Phase 3 coordinator")
-    cloud.add_argument("--profile", choices=("operator", "primary", "standby", "gateway"))
+    cloud.add_argument("--profile", choices=("operator", "primary", "standby", "gateway", "photon", "pi_primary"))
     actions = cloud.add_subparsers(dest="action", required=True)
-    for action in ("doctor", "create", "status", "events", "rescue", "worker", "bridge"):
+    for action in ("doctor", "create", "status", "events", "rescue", "worker", "bridge", "photon", "pi-telemetry"):
         parser = actions.add_parser(action)
         parser.set_defaults(handler=run)
         parser.add_argument("--job", required=action != "doctor")
+        if action in {"photon", "pi-telemetry"}:
+            parser.add_argument("--seconds", type=int, default=120)
+        if action == "photon":
+            parser.add_argument("--investigation", type=Path, help="saved Nemotron advisory for WHY and handoff")
+            parser.add_argument("--events", type=Path, help="journal backing the saved investigation")
+        if action == "create":
+            parser.add_argument("--primary", choices=(PRIMARY, PI_PRIMARY), default=PRIMARY)
         if action == "worker":
-            parser.add_argument("--role", choices=tuple(DEVICE_IDS), required=True)
+            parser.add_argument("--role", choices=("primary", "standby"), required=True)
         if action == "bridge":
             parser.add_argument("--port", required=True, help="Espressif native USB serial port")
+            parser.add_argument("--monitor", action="store_true", help="forward ambient and coordinator display state")
 
 
 def run(args):
@@ -276,29 +290,74 @@ def run(args):
         client = CloudClient(settings.get("LIFERAFT_CLOUD_URL") or "", settings.get("LIFERAFT_CLOUD_TOKEN") or "")
         action = args.action
         job = TypeAdapter(Identifier).validate_python(args.job) if args.job else None
+        if action == "pi-telemetry":
+            from .pi import cpu_temperature, is_pi5
+
+            if (not 1 <= args.seconds <= 900 or not is_pi5()
+                    or client.call("doctor")["role"] != "pi_primary"):
+                raise ValueError("Pi telemetry requires a Pi 5, its scoped token and a bounded duration")
+            deadline = time.monotonic() + args.seconds
+            while time.monotonic() < deadline:
+                value = cpu_temperature()
+                client.call("pi_telemetry", job, client_utc=utc_now().isoformat(), pi_cpu_temp_c=value)
+                time.sleep(min(2, max(0, deadline - time.monotonic())))
+            return 0
+        if action == "photon":
+            from .photon import PhotonClient, drain
+
+            if not 1 <= args.seconds <= 900 or client.call("doctor")["role"] != "photon":
+                raise ValueError("Photon runner requires its scoped token and a bounded duration")
+            provider = PhotonClient(settings.get("PHOTON_API_KEY") or os.environ.get("PHOTON_API_KEY", ""))
+            if args.investigation:
+                from .cockpit import investigation_view
+                from .evidence import load_export, recovery_brief
+
+                events, _ = load_export(args.events or state_dir() / f"{job}.jsonl", job)
+                proof = recovery_brief(events, job)
+                if not proof["verified_resumed"]:
+                    raise ValueError("Photon handoff requires verified recovery evidence")
+                incident = proof["incident_id"]
+                advisory = investigation_view(args.investigation, job, events, incident)
+                scoped = {str(event.event_id) for event in events if event.incident_id == incident}
+                refs = list(dict.fromkeys(
+                    ref for fact in advisory["facts"] for ref in fact["evidence_event_ids"] if ref in scoped
+                ))[:4]
+                if not refs or not client.call("photon_context", job, incident=incident,
+                                               summary=advisory["outcome"][:400], refs=refs):
+                    raise ValueError("Photon handoff did not match the current hosted incident")
+            drain(client, provider, job, time.monotonic() + args.seconds)
+            return 0
         if action == "bridge":
             from .bridge import run_bridge
 
-            run_bridge(client, job, args.port)
+            run_bridge(client, job, args.port, continuous=args.monitor)
             return 0
         if action == "worker":
             from .worker import run_worker
 
-            if client.call("doctor")["role"] != args.role:
+            capability = client.call("doctor")
+            authenticated_role = capability.get("role")
+            allowed_roles = {"primary", "pi_primary"} if args.role == "primary" else {"standby"}
+            if authenticated_role not in allowed_roles:
                 raise ValueError("cloud token does not match the worker role")
 
+            worker_id = DEVICE_IDS[authenticated_role]
+            advertised = capability.get("worker_id")
+            if advertised != worker_id and (advertised is not None or authenticated_role == "pi_primary"
+                                           or capability.get("edge_protocol") == "v1"):
+                raise ValueError("coordinator returned an invalid worker identity")
             root = state_dir()
             root.mkdir(exist_ok=True, parents=True, mode=0o700)
             store = LocalArtifactStore(Path(tempfile.mkdtemp(prefix=f"cloud-{args.role}-", dir=root)))
-            coordinator = CloudWorkerCoordinator(client, store)
-            run_worker(coordinator, store, job_id=job, worker_id=DEVICE_IDS[args.role], role=args.role,
-                       step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint)
+            coordinator = CloudWorkerCoordinator(client, store, adaptive=capability.get("edge_protocol") == "v1")
+            run_worker(coordinator, store, job_id=job, worker_id=worker_id, role=args.role,
+                       step_sleep=0.4, timeout=240, poll_s=1.0, fetch_checkpoint=coordinator.fetch_checkpoint, adaptive=coordinator.adaptive)
             return 0
         fields = {}
         if action == "create":
             from .workload import CONFIG_FINGERPRINT, MODEL_VERSION, make_dataset
 
-            spec = JobSpec(job_id=job, run_id=f"run-{uuid4().hex}", primary=PRIMARY, seed=1729,
+            spec = JobSpec(job_id=job, run_id=f"run-{uuid4().hex}", primary=args.primary, seed=1729,
                            target=200, checkpoint_every=10, model_version=MODEL_VERSION,
                            dataset_fingerprint=make_dataset(1729)[2], config_fingerprint=CONFIG_FINGERPRINT)
             fields = spec.model_dump(mode="json")

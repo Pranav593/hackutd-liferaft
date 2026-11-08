@@ -9,7 +9,7 @@ from pydantic import Field, TypeAdapter
 from .config import redact, state_dir
 from .contracts import Digest, Identifier
 from .evidence import MAX_EXPORT_BYTES, load_export, recovery_brief, verify_journal
-from .nemotron import InvestigationReport, TOOL_EVENTS, tool_events
+from .nemotron import EXTENDED_TOOLS, InvestigationReport, TOOL_EVENTS, tool_events
 
 identifier = TypeAdapter(Identifier)
 digest = TypeAdapter(Digest)
@@ -47,14 +47,28 @@ def project_event(event, row):
     step = step_number(data.get("checkpoint_step" if event.event_type == "LEASE_TRANSFERRED" else "step"))
     loss = number(data.get("loss")) if event.source_type == "measured" else None
     sensor = None
-    if event.event_type == "SENSOR_EVENT_RECEIVED" and data.get("device_id") == "esp32-s3-01":
+    if event.event_type in {"SENSOR_EVENT_RECEIVED", "AMBIENT_TELEMETRY"} and data.get("device_id") == "esp32-s3-01":
         ambient = number(data.get("ambient_temp_c"), -55, 125) if data.get("ambient_valid") is True else None
         sensor = {"device": "esp32-s3-01", "button": data.get("button_pressed") is True,
                   "ambient": ambient if event.source_type == "measured" else None}
+    cpu = None
+    if event.event_type == "PI_CPU_TELEMETRY" and event.source_type == "measured" and data.get("cpu_temp_valid") is True:
+        cpu = number(data.get("pi_cpu_temp_c"), 0, 110)
+    risk = None
+    if event.event_type == "CHECKPOINT_POLICY_CHANGED" and event.source_type == "derived":
+        reasons = data.get("reasons")
+        interval = step_number(data.get("interval"))
+        score = number(data.get("risk_score"), 0, 100)
+        if (interval and score is not None and isinstance(reasons, list)
+                and len(reasons) <= 12 and all(isinstance(reason, str) and len(reason) <= 64
+                                              and reason.replace("_", "").isalpha() for reason in reasons)):
+            risk = {"interval": interval, "score": score, "reasons": reasons,
+                    "steps_at_risk": step_number(data.get("estimated_work_at_risk_steps"))}
     return {"seq": row["seq"], "id": str(event.event_id), "incident": event.incident_id,
             "kind": event.event_type, "source": event.source_type, "at": event.created_utc.isoformat(),
             "worker": event.worker_id, "epoch": event.lease_epoch, "step": step, "loss": loss,
             "hash": row["event_hash"][:12], "previous_hash": row["prev_hash"][:12], "sensor": sensor,
+            "cpu_c": cpu, "risk": risk,
             **checkpoint_fields(data)}
 
 
@@ -111,12 +125,14 @@ def investigation_view(path, job, events, incident):
     saved = read_json(path)
     report = InvestigationReport.model_validate(saved["report"])
     trace = saved["tool_trace"]
+    names = tuple(call["tool"] for call in trace)
+    expected_names = (tuple(TOOL_EVENTS), (*TOOL_EVENTS, *EXTENDED_TOOLS))
     if ((saved.get("event_type"), saved.get("job_id"), saved.get("source_type"), report.incident_id) !=
             ("NEMOTRON_INVESTIGATION", job, "provider", incident)
-            or not isinstance(trace, list) or len(trace) != len(TOOL_EVENTS)):
+            or not isinstance(trace, list) or names not in expected_names):
         raise ValueError("investigation does not match this replay")
     tools = []
-    for name, call in zip(TOOL_EVENTS, trace):
+    for name, call in zip(names, trace):
         expected = redact(tool_events(events, incident, name))
         if (call["tool"] != name or call["arguments"] != {"incident_id": incident} or call["events"] != expected):
             raise ValueError("investigation tool results differ from the journal")

@@ -16,7 +16,7 @@ MAX_TICKET_CHARS = 8192
 
 class TransferTicket(WireModel):
     version: Literal[1] = 1
-    role: Literal["primary", "standby"]
+    role: Literal["primary", "standby", "pi_primary"]
     method: Literal["GET", "PUT"]
     issued_at: int = Field(strict=True, ge=0)
     expires_at: int = Field(strict=True, ge=0)

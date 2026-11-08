@@ -41,7 +41,8 @@ function Recovery({ replay }: { replay: Replay | null }) {
 const milestoneKinds = new Set([
   "JOB_STARTED", "SENSOR_EVENT_RECEIVED", "RESCUE_REQUESTED", "PRIMARY_PROCESS_KILLED", "PRIMARY_UNREACHABLE",
   "PRIMARY_PAUSE_REQUESTED", "PRIMARY_YIELDED", "CHECKPOINT_SELECTED", "LEASE_TRANSFERRED",
-  "FIRST_RESUMED_STEP_COMPLETED", "JOB_COMPLETED",
+  "FIRST_RESUMED_STEP_COMPLETED", "JOB_COMPLETED", "CHECKPOINT_POLICY_CHANGED",
+  "PHOTON_ACK", "PHOTON_ACCEPTED", "PHOTON_DELIVERED", "PHOTON_FAILED",
 ])
 
 function FlightRecorder({ replay, selected, onSelect, loading, verify }: {
@@ -80,6 +81,9 @@ function FlightRecorder({ replay, selected, onSelect, loading, verify }: {
       <span className="kicker">EVENT {selected.seq} · {eventName(selected.kind)}</span>
       <p>{selected.worker ?? "Worker unknown"} · epoch {selected.epoch}{selected.step != null && ` · step ${selected.step}`}</p>
       {selected.hash_prefix && <p>Checkpoint SHA-256 prefix <code>{selected.hash_prefix}</code></p>}
+      {selected.risk && <p>Interval <strong>{selected.risk.interval} steps</strong> · risk {selected.risk.score}/100
+        {selected.risk.steps_at_risk != null && ` · estimated work at risk ${selected.risk.steps_at_risk} steps`}.
+        {selected.risk.reasons.length > 0 && ` ${selected.risk.reasons.map((reason) => reason.replaceAll("_", " ")).join(", ")}.`}</p>}
       {selected.loss != null && <p>Measured loss <strong>{selected.loss.toPrecision(6)}</strong></p>}
       <p className="subtle">Previous <code>{selected.previous_hash}</code> <span aria-hidden="true">→</span> Event <code>{selected.hash}</code></p>
     </div>}
@@ -103,12 +107,14 @@ function CheckpointLedger({ replay, onSelect }: { replay: Replay | null; onSelec
 }
 
 function SensorEvidence({ replay }: { replay: Replay | null }) {
-  const sensor = replay?.events.findLast((event) => event.sensor)
+  const sensor = replay?.events.findLast((event) => event.sensor?.button)
+  const ambient = replay?.events.findLast((event) => event.kind === "AMBIENT_TELEMETRY")
+  const cpu = replay?.events.findLast((event) => event.kind === "PI_CPU_TELEMETRY")
   return <section className="panel sensors-panel">
     <PanelTitle icon="radio" title="Sensor evidence" detail={<span className="kicker">HISTORICAL</span>} />
     <dl className="sensor-values">
-      <div><dt>Pi CPU temperature</dt><dd><Badge source="no data" /></dd></div>
-      <div><dt>DS18B20 ambient</dt><dd>{sensor?.sensor?.ambient != null ? <>{sensor.sensor.ambient} °C <Badge source="measured" /></> : <Badge source="no data" />}</dd></div>
+      <div><dt>Pi CPU temperature</dt><dd>{cpu?.cpu_c != null ? <>{cpu.cpu_c} °C <Badge source="measured" /></> : <Badge source="no data" />}</dd></div>
+      <div><dt>DS18B20 ambient</dt><dd>{ambient?.sensor?.ambient != null ? <>{ambient.sensor.ambient} °C <Badge source="measured" /></> : <Badge source="no data" />}</dd></div>
       <div><dt>ESP32 button</dt><dd><Badge source={sensor?.sensor?.button ? sensor.source : "no data"} /></dd></div>
     </dl>
     <p className="subtle">{sensor?.sensor?.button ? `Drill frame recorded at ${utc(sensor.at)}.` : "No hardware button frame in this journal."}</p>
@@ -133,15 +139,20 @@ function NemotronTrace({ replay, onSelect }: { replay: Replay | null; onSelect: 
   </section>
 }
 
-function ReadinessAndMessages() {
+function ReadinessAndMessages({ replay, onSelect }: { replay: Replay | null; onSelect: (event: ReplayEvent) => void }) {
+  const messages = replay?.events.filter((event) => event.kind.startsWith("PHOTON_")).slice(-6).reverse() ?? []
+  const hasProvider = messages.some((event) => event.source === "provider")
   return <div className="side-stack">
     <section className="panel status-panel">
       <PanelTitle icon="radar" title="Lifeboat Score" detail={<Badge source="no data" />} />
       <div className="score"><span className="score-ring">—</span><p>Historical replay has no current lease, standby, or telemetry freshness.</p></div>
     </section>
     <section className="panel status-panel">
-      <PanelTitle icon="message" title="Photon" detail={<Badge source="no data" />} />
-      <p className="empty-state">No delivery or acknowledgement evidence attached.</p>
+      <PanelTitle icon="message" title="Photon" detail={<Badge source={hasProvider ? "provider" : messages[0]?.source ?? "no data"} />} />
+      {messages.length ? <ul className="tool-list">{messages.map((event) =>
+        <li key={event.id}><button className="text-button" onClick={() => onSelect(event)}>{eventName(event.kind)} ↗</button>
+          <Badge source={event.source} /></li>)}</ul>
+        : <p className="empty-state">No delivery or acknowledgement evidence attached.</p>}
     </section>
   </div>
 }
@@ -217,7 +228,7 @@ export function Cockpit() {
           <CheckpointLedger replay={replay} onSelect={inspect} /></div>
         <FlightRecorder replay={replay} selected={selected} onSelect={select} loading={loading} verify={verify} />
       </div>
-      <div className="support-grid"><SensorEvidence replay={replay} /><NemotronTrace replay={replay} onSelect={inspect} /><ReadinessAndMessages /></div>
+      <div className="support-grid"><SensorEvidence replay={replay} /><NemotronTrace replay={replay} onSelect={inspect} /><ReadinessAndMessages replay={replay} onSelect={inspect} /></div>
       <footer><span>LIFERAFT / EVIDENCE CONSOLE</span><span>Journal integrity and coordinator-recorded checkpoint verification.</span></footer>
     </main>
   </>

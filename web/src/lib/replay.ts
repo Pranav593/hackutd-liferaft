@@ -14,6 +14,8 @@ export interface ReplayEvent {
   hash: string
   previous_hash: string
   sensor: { device: string; button: boolean; ambient: number | null } | null
+  cpu_c: number | null
+  risk: { interval: number; score: number; reasons: string[]; steps_at_risk: number | null } | null
   checkpoint_id?: string
   hash_prefix?: string
 }
@@ -68,6 +70,9 @@ const names: Record<string, string> = {
   RESCUE_VERIFIED: "Coordinator recorded recovery",
   JOB_COMPLETED: "Training target reached",
   WORKER_HEARTBEAT: "Worker heartbeat",
+  PI_CPU_TELEMETRY: "Pi CPU sample",
+  AMBIENT_TELEMETRY: "Ambient sample",
+  CHECKPOINT_POLICY_CHANGED: "Checkpoint interval changed",
 }
 
 export function eventName(kind: string) {

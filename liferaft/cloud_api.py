@@ -15,15 +15,20 @@ from pydantic import Field, TypeAdapter, ValidationError
 
 from .artifacts import IntegrityError, verify_data
 from .atlas import AtlasRepository
-from .contracts import ButtonEvent, CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
+from .config import redact
+from .contracts import AdaptiveHeartbeat, AmbientReport, ButtonEvent, PiTelemetry, CheckpointManifest, Digest, Identifier, MAX_CHECKPOINT_BYTES, Step, WireModel, WorkerHeartbeat
 from .failover import JobSpec, JobPlan
+from . import photon_queue
+from .photon import MAX_WEBHOOK_BYTES, PhotonScope, valid_id
+from .pi import PI_PRIMARY
 from .transfers import issue_ticket, verify_ticket
 
 PRIMARY = "laptop-primary"
 STANDBY = "laptop-standby"
-DEVICE_IDS = {"primary": PRIMARY, "standby": STANDBY}
+DEVICE_IDS = {"primary": PRIMARY, "standby": STANDBY, "pi_primary": PI_PRIMARY}
 WORKERS = frozenset(DEVICE_IDS)
-REQUIRED_ROLES = WORKERS | {"operator"}
+PRIMARY_ROLES = frozenset({"primary", "pi_primary"})
+REQUIRED_ROLES = {"primary", "standby", "operator"}
 TOKEN_PATTERN = re.compile(r"[a-f0-9]{64}")
 LOGGER = logging.getLogger(__name__)
 MAX_BODY = ((MAX_CHECKPOINT_BYTES + 2) // 3) * 4 + 8192
@@ -55,6 +60,12 @@ class EventCursor(WireModel):
     limit: int = Field(default=500, ge=1, le=500, strict=True)
 
 
+class PhotonContext(WireModel):
+    incident: Identifier
+    summary: str = Field(min_length=1, max_length=400)
+    refs: list[UUID] = Field(min_length=1, max_length=4)
+
+
 class APIError(Exception):
     def __init__(self, status, code):
         self.status = status
@@ -71,8 +82,8 @@ def unique_keys(pairs):
     return result
 
 
-def application(repository, credentials, *, drills=False):
-    if (set(credentials) not in (REQUIRED_ROLES, REQUIRED_ROLES | {"gateway"})
+def application(repository, credentials, *, drills=False, photon=None):
+    if (not REQUIRED_ROLES <= set(credentials) <= REQUIRED_ROLES | {"gateway", "photon", "pi_primary"}
             or any(not TOKEN_PATTERN.fullmatch(token) for token in credentials.values())
             or len(set(credentials.values())) != len(credentials)):
         raise ValueError("configure distinct 64-character hex credentials for each role")
@@ -85,7 +96,8 @@ def application(repository, credentials, *, drills=False):
         if action == "doctor" and job is None and not args:
             repository.ping()
             return {"auth": True, "database": True, "role": role, "checkpoint_transfer": "signed-v1",
-                    "event_export": "paged-v1"}
+                    "event_export": "paged-v1", "edge_protocol": "v1",
+                    "worker_id": DEVICE_IDS.get(role)}
         if job is None:
             raise APIError("422 Unprocessable Entity", "JOB_REQUIRED")
         if action == "doctor" and not args:
@@ -103,6 +115,43 @@ def application(repository, credentials, *, drills=False):
             if role not in roles:
                 raise APIError("403 Forbidden", "ROLE_DENIED")
 
+        if action in {"photon_claim", "photon_result", "photon_context"}:
+            allowed({"photon"})
+            if photon is None or job != photon.job:
+                raise APIError("403 Forbidden", "PHOTON_SCOPE_DENIED")
+            if action == "photon_context":
+                context = PhotonContext.model_validate(args)
+                summary = redact(" ".join(context.summary.split()))
+                refs = [str(ref) for ref in context.refs]
+                if not summary or len(set(refs)) != len(refs):
+                    raise ValueError("invalid Photon context")
+                return repository.execute(job, lambda policy: photon_queue.attach_context(
+                    policy, job, context.incident, summary, refs))
+            if action == "photon_claim" and not args:
+                task = repository.execute(job, lambda policy: photon_queue.claim(policy, job))
+                return None if task is None else {**task, "project": photon.project,
+                                                   "space": photon.space, "agent": photon.agent}
+            if set(args) not in ({"task_id", "lease", "message_id"}, {"task_id", "lease", "retryable"}):
+                raise ValueError("invalid Photon result")
+            task_id = str(TypeAdapter(UUID).validate_python(args["task_id"]))
+            lease = args["lease"]
+            message_id, retryable = args.get("message_id"), args.get("retryable", False)
+            if (not isinstance(lease, str) or not re.fullmatch(r"[a-f0-9]{32}", lease)
+                    or type(retryable) is not bool or ("message_id" in args and not valid_id(message_id, "msg"))):
+                raise ValueError("invalid Photon result")
+            return repository.execute(job, lambda policy: photon_queue.result(
+                policy, job, task_id, lease, message_id, retryable))
+        if action == "pi_telemetry":
+            allowed({"pi_primary"})
+            reading = PiTelemetry.model_validate(args)
+            return repository.execute(job, lambda policy: policy.report_pi(job, reading))
+        if action == "ambient":
+            allowed({"gateway"})
+            report = AmbientReport.model_validate_json(json.dumps(args, allow_nan=False))
+            return repository.execute(job, lambda policy: policy.report_ambient(job, report))
+        if action == "edge_status" and not args:
+            allowed({"gateway"})
+            return repository.execute(job, lambda policy: policy.edge_status(job))
         if action == "button":
             allowed({"gateway"})
             if not drills:
@@ -114,7 +163,8 @@ def application(repository, credentials, *, drills=False):
         if action == "create":
             allowed({"operator"})
             spec = JobSpec.model_validate(args)
-            if (spec.job_id != job or spec.primary != PRIMARY
+            configured_primaries = {DEVICE_IDS[identity] for identity in PRIMARY_ROLES if identity in credentials}
+            if (spec.job_id != job or spec.primary not in configured_primaries
                     or spec.target > 200 or spec.checkpoint_every < 10):
                 raise ValueError("job does not match the hosted demo limits")
             return repository.execute(job, lambda policy: policy.create_job(spec), create=True)
@@ -134,7 +184,7 @@ def application(repository, credentials, *, drills=False):
         if action == "spec" and not args:
             return repository.execute(job, lambda policy: policy.get_spec(job))
         if action == "start" and not args:
-            allowed({"primary"})
+            allowed(PRIMARY_ROLES)
             return repository.execute(job, lambda policy: policy.start_primary(job, worker))
         if action == "register" and not args:
             allowed({"standby"})
@@ -142,10 +192,13 @@ def application(repository, credentials, *, drills=False):
         if action == "candidates" and not args:
             allowed({"standby"})
             return repository.execute(job, lambda policy: policy.checkpoint_candidates(job, worker))
-        if action == "heartbeat":
-            heartbeat = WorkerHeartbeat.model_validate(args)
+        if action in {"heartbeat", "heartbeat_edge"}:
+            model = AdaptiveHeartbeat if action == "heartbeat_edge" else WorkerHeartbeat
+            heartbeat = model.model_validate(args)
             if (heartbeat.job_id, heartbeat.worker_id) != (job, worker):
                 raise APIError("403 Forbidden", "IDENTITY_DENIED")
+            if role == "pi_primary" and (heartbeat.system.os, heartbeat.system.arch) != ("Linux", "aarch64"):
+                raise APIError("422 Unprocessable Entity", "PI_PLATFORM_REQUIRED")
             return repository.execute(job, lambda policy: policy.heartbeat(heartbeat))
         if action == "upload_url" and set(args) == {"manifest"}:
             manifest = CheckpointManifest.model_validate(args["manifest"])
@@ -175,7 +228,7 @@ def application(repository, credentials, *, drills=False):
         if action in {"claim", "yield", "download"}:
             ref = CheckpointRef.model_validate(args)
             if action == "yield":
-                allowed({"primary"})
+                allowed(PRIMARY_ROLES)
                 return repository.execute(job, lambda policy: policy.yield_or_pause(
                     job, worker, ref.epoch, ref.checkpoint_id,
                 ))
@@ -207,7 +260,7 @@ def application(repository, credentials, *, drills=False):
         if isinstance(item, WireModel):
             return item.model_dump(mode="json")
         if isinstance(item, JobPlan):
-            return asdict(item)
+            return {key: value for key, value in asdict(item).items() if value is not None}
         raise TypeError("invalid response object")
 
     def transfer_url(manifest, role, method):
@@ -258,6 +311,21 @@ def application(repository, credentials, *, drills=False):
 
         return repository.execute(manifest.job_id, download)
 
+    def photon_webhook(environ):
+        if photon is None:
+            raise APIError("404 Not Found", "UNKNOWN_ROUTE")
+        length = int(environ.get("CONTENT_LENGTH") or 0)
+        if not 0 < length <= MAX_WEBHOOK_BYTES:
+            raise APIError("413 Payload Too Large", "BODY_SIZE")
+        raw = environ["wsgi.input"].read(length)
+        if len(raw) != length or not photon.verify(environ, raw):
+            raise APIError("401 Unauthorized", "PHOTON_SIGNATURE_REQUIRED")
+        event = photon.parse(json.loads(raw, object_pairs_hook=unique_keys))
+        if event is not None:
+            if not repository.execute(photon.job, lambda policy: photon_queue.ingest(policy, photon.job, event)):
+                raise APIError("503 Service Unavailable", "PHOTON_RECEIPT_PENDING")
+        return {"received": True}
+
     def handle(environ, start_response):
         request_id = uuid4().hex
         status = "200 OK"
@@ -267,6 +335,8 @@ def application(repository, credentials, *, drills=False):
                 payload = {"ready": True}
             elif route[0] in {"GET", "PUT"} and route[1] == "/v1/checkpoint":
                 payload = transfer(environ)
+            elif route == ("POST", "/v1/photon/webhook"):
+                payload = photon_webhook(environ)
             elif route == ("POST", "/v1/control"):
                 role = authenticate(environ)
                 length = int(environ.get("CONTENT_LENGTH") or 0)
@@ -311,4 +381,19 @@ def from_environment():
     gateway_token = os.environ.get("LIFERAFT_GATEWAY_TOKEN")
     if gateway_token:
         credentials["gateway"] = gateway_token
-    return application(AtlasRepository(uri), credentials, drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1")
+    pi_token = os.environ.get("LIFERAFT_PI_PRIMARY_TOKEN")
+    if pi_token:
+        credentials["pi_primary"] = pi_token
+    photon = None
+    try:
+        photon = PhotonScope.from_environment()
+        if photon is not None:
+            token = os.environ.get("LIFERAFT_PHOTON_TOKEN", "")
+            if not TOKEN_PATTERN.fullmatch(token) or token in credentials.values():
+                raise ValueError("configure a separate Photon runner token")
+            credentials["photon"] = token
+    except ValueError:
+        photon = None
+        LOGGER.warning("Photon integration disabled because its scoped configuration is invalid")
+    return application(AtlasRepository(uri), credentials, photon=photon,
+                       drills=os.environ.get("LIFERAFT_ENABLE_DRILLS") == "1")

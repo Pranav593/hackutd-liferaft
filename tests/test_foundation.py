@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import os
 import sqlite3
 from contextlib import closing
@@ -27,10 +28,16 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(event, IncidentEvent.model_validate_json(event.model_dump_json()))
         self.assertEqual(Path("contracts/v1.schema.json").read_text(), schema_snapshot())
         ts = Path("web/src/lib/contracts.ts").read_text()
+        def interface_fields(name):
+            match = re.search(rf"interface {name}(?: extends (\w+))? \{{([^}}]*)\}}", ts)
+            self.assertIsNotNone(match, name)
+            parent, body = match.groups()
+            inherited = interface_fields(parent) if parent else set()
+            return inherited | {line.strip().split(":")[0].removesuffix("?")
+                                for line in body.splitlines() if line.strip()}
+
         for model in MODELS:
-            fields = ts.split(f"interface {model.__name__} {{", 1)[1].split("}", 1)[0]
-            self.assertEqual({line.strip().split(":")[0] for line in fields.splitlines() if line.strip()},
-                             set(model.model_fields))
+            self.assertEqual(interface_fields(model.__name__), set(model.model_fields))
 
     def test_invalid_timestamps(self):
         for value in ("2026-11-07T15:31:02", "2026-11-07T15:31:02-06:00", 123456789, "2026-02-30T15:31:02Z"):

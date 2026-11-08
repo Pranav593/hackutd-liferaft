@@ -2,6 +2,8 @@
 
 LIFERAFT preserves a CPU training job in verified checkpoints so a backup worker can eventually pick up where the primary left off. See [PHASE_TRACKER.md](PHASE_TRACKER.md) for observed results and the current phase.
 
+For the next hosted, Pi, ESP32, Nemotron and Photon checks, see [the Phases 3–8 bring-up](docs/PHASES_3_8_OPERATOR_STEPS.md).
+
 ## Local setup
 
 Use Python 3.11–3.13. Open Terminal (macOS/Linux) or PowerShell (Windows) in the project folder.

@@ -133,7 +133,8 @@ class CloudTests(unittest.TestCase):
         self.assertEqual(self.request("status", role="primary")[0], 403)
         self.assertEqual(self.request("download", role="primary", checkpoint_id="abc", epoch=1)[0], 403)
         self.assertEqual(self.call("doctor", None), {"auth": True, "database": True, "role": "operator",
-                                                     "checkpoint_transfer": "signed-v1", "event_export": "paged-v1"})
+                                                     "checkpoint_transfer": "signed-v1", "event_export": "paged-v1",
+                                                     "edge_protocol": "v1", "worker_id": None})
         with self.assertRaises(ValueError):
             CloudClient("http://example.test", TOKENS["operator"])
         with self.assertRaises(ValueError):

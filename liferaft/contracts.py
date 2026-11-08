@@ -49,8 +49,8 @@ class IncidentEvent(WireModel):
 
 
 class WorkerSystem(WireModel):
-    os: str
-    arch: str
+    os: str = Field(min_length=1, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
+    arch: str = Field(min_length=1, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
     pi_cpu_temp_c: Annotated[float, Field(ge=-20, le=110)] | None = None
     cpu_temp_valid: bool = False
 
@@ -76,6 +76,39 @@ class WorkerHeartbeat(WireModel):
     status: Literal["RUNNING", "STANDBY", "PAUSED", "STOPPED"]
     system: WorkerSystem
     checkpoint: WorkerCheckpoint
+
+
+class AdaptiveHeartbeat(WorkerHeartbeat):
+    checkpoint_ms: float | None = Field(default=None, ge=0, le=30_000, strict=True)
+    step_wall_ms: float | None = Field(default=None, gt=0, le=30_000, strict=True)
+
+
+class PiTelemetry(WireModel):
+    client_utc: AwareDatetime
+    pi_cpu_temp_c: float | None = Field(ge=0, le=110, strict=True)
+
+
+class AmbientFrame(WireModel):
+    model_config = ConfigDict(strict=True)
+    protocol_version: Literal[1]
+    device_id: Literal["esp32-s3-01"]
+    seq: int = Field(ge=0, le=0xFFFFFFFF)
+    uptime_ms: int = Field(ge=0, le=0xFFFFFFFF)
+    ambient_temp_c: float | None = Field(ge=-55, le=125)
+    ambient_valid: bool
+    button_pressed: Literal[False]
+    event_type: Literal["TELEMETRY"]
+    source_type: Literal["measured"]
+
+    @model_validator(mode="after")
+    def check_reading(self):
+        if self.ambient_valid != (self.ambient_temp_c is not None) or self.ambient_temp_c == 85:
+            raise ValueError("invalid ambient reading")
+        return self
+
+
+class AmbientReport(AmbientFrame):
+    session: UUID
 
 
 class ButtonEvent(WireModel):

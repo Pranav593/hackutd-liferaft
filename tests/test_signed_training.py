@@ -65,7 +65,7 @@ class SignedTrainingTests(unittest.TestCase):
 
             operator = client("operator")
             primary = CloudWorkerCoordinator(client("primary"), LocalArtifactStore(root / "primary"))
-            standby = CloudWorkerCoordinator(client("standby"), LocalArtifactStore(root / "standby"))
+            standby = CloudWorkerCoordinator(client("standby"), LocalArtifactStore(root / "standby"), adaptive=True)
             spec = JobSpec(job_id="test-job", run_id="test-run", primary=PRIMARY, seed=1729,
                            target=200, checkpoint_every=10, model_version=MODEL_VERSION,
                            dataset_fingerprint=session.dataset_fingerprint, config_fingerprint=CONFIG_FINGERPRINT)
@@ -94,7 +94,7 @@ class SignedTrainingTests(unittest.TestCase):
             with redirect_stdout(io.StringIO()) as output:
                 run_worker(standby, standby.store, job_id=spec.job_id, worker_id=STANDBY,
                            role="standby", step_sleep=0.03, timeout=40, poll_s=0.1,
-                           fetch_checkpoint=standby.fetch_checkpoint)
+                           fetch_checkpoint=standby.fetch_checkpoint, adaptive=True)
             rows = [json.loads(line) for line in output.getvalue().splitlines()]
             steps = [r for r in rows if r["event_type"] == "TRAINING_STEP_COMPLETED"]
             self.assertEqual([r["step_completed"] for r in steps], list(range(26, 201)))
@@ -121,6 +121,7 @@ class SignedTrainingTests(unittest.TestCase):
             self.assertIn("PUT", methods)
             self.assertIn("GET", methods)
             controls = [json.loads(r.data)["action"] for r in opener.requests if r.get_method() == "POST"]
+            self.assertIn("heartbeat_edge", controls)
             self.assertNotIn("commit", controls)
             self.assertNotIn("download", controls)
             print(json.dumps({"mode": "same_host_in_process_wsgi", "target_step": 200,

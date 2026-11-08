@@ -1,0 +1,16 @@
+[Unit]
+Description=LIFERAFT guarded Raspberry Pi primary worker
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/liferaft
+EnvironmentFile=%h/.config/liferaft/pi-worker.env
+ExecStart=%h/liferaft/.venv/bin/python -m liferaft cloud --profile pi_primary worker --role primary --job ${LIFERAFT_JOB}
+NoNewPrivileges=true
+CPUQuota=100%
+Restart=no
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

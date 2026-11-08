@@ -11,7 +11,7 @@ from uuid import uuid4
 from liferaft.cli import main
 from liferaft.contracts import IncidentEvent, utc_now
 from liferaft.coordinator import LocalCoordinator
-from liferaft.nemotron import NVIDIA_ENDPOINT, load_events
+from liferaft.nemotron import EXTENDED_TOOLS, NVIDIA_ENDPOINT, TOOL_EVENTS, investigate, load_events
 
 
 class NemotronTests(unittest.TestCase):
@@ -79,6 +79,36 @@ class NemotronTests(unittest.TestCase):
                 else:
                     self.assertEqual(result["source_type"], "provider")
                     self.assertEqual(len(result["tool_trace"]), 2)
+
+    def test_extended_tool_exchange_keeps_all_tools_read_only_and_scoped(self):
+        events = load_events(self.path, "test-job")
+        names = [*TOOL_EVENTS, *EXTENDED_TOOLS]
+        report = {"incident_id": "inc-test", "observed_facts": [
+            {"text": "Injected drill", "evidence_event_ids": [str(events[0].event_id)]},
+            {"text": "Measured optimizer step", "evidence_event_ids": [str(events[1].event_id)]},
+        ], "likely_failure_mode": "Injected", "uncertainty": "Hardware data unavailable",
+            "recommended_software_actions": [], "unknowns": [], "verification_checks": [],
+            "verified_outcome": "Measured step recorded"}
+        calls = []
+
+        def complete(messages, tools, choice, timeout):
+            self.assertEqual([tool["function"]["name"] for tool in tools], names)
+            self.assertLessEqual(timeout, 20)
+            if choice == "none":
+                self.assertIn("approved", tools[-1]["function"]["description"])
+                self.assertIn("RPO is unknown", messages[-1]["content"])
+                return {"content": json.dumps(report)}
+            name = choice["function"]["name"]
+            calls.append(name)
+            return {"tool_calls": [{"id": name, "type": "function", "function": {
+                "name": name, "arguments": '{"incident_id":"inc-test"}',
+            }}]}
+
+        from unittest.mock import Mock
+        result, trace = investigate(Mock(complete=complete), "test-job", events, extended=True)
+        self.assertEqual(calls, names)
+        self.assertEqual([entry["tool"] for entry in trace], names)
+        self.assertEqual(result.incident_id, "inc-test")
 
     def test_rejects_tampered_export(self):
         self.events[0]["source_type"] = "measured"
